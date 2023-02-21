@@ -1,0 +1,22 @@
+[package]
+name = "iced_inspector"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[dependencies.iced]
+version = "0.8"
+features = ["tokio"]
+git = "https://github.com/iced-rs/iced.git"
+rev = "1fb413fd8014ad5911a95292bcfbeadb5a58d72f"
+
+[dependencies.protocol]
+version = "0.1.0"
+package = "iced_inspector_protocol"
+path = "protocol"
+
+[workspace]
+members = [
+  "protocol",
+]
