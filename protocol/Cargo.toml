@@ -9,7 +9,7 @@ futures = "0.3"
 
 [dependencies.tokio]
 version = "1"
-features = ["rt", "rt-multi-thread", "net", "sync", "io-util", "macros"]
+features = ["rt", "rt-multi-thread", "net", "sync", "time", "io-util", "macros"]
 
 [dependencies.serde]
 version = "1"

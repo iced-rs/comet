@@ -2,20 +2,34 @@ use futures::future;
 use futures::stream::{self, Stream, StreamExt};
 use semver::Version;
 use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tokio::io::{self, AsyncBufReadExt, BufStream};
 use tokio::net;
 
-pub const SOCKET_ADDRESS: &'static str = "127.0.0.1:9167";
+pub const SOCKET_ADDRESS: &str = "127.0.0.1:9167";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Input {
-    Connected { title: String, version: Version },
+    Connected { version: Version },
+    PerformanceReported(Performance),
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Connected { title: String },
+    Connected,
     Disconnected,
+    PerformanceReported(Performance),
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum Performance {
+    Startup(Duration),
+    Update(Duration),
+    View(Duration),
+    Layout(Duration),
+    OnEvent(Duration),
+    Draw(Duration),
+    Render(Duration),
 }
 
 pub fn run() -> impl Stream<Item = Message> {
@@ -59,24 +73,32 @@ async fn connect() -> Result<net::TcpStream, io::Error> {
 async fn receive(
     mut stream: BufStream<net::TcpStream>,
 ) -> Result<(BufStream<net::TcpStream>, Message), io::Error> {
+    let mut input = String::new();
+
     loop {
-        let mut input = String::new();
+        match stream.read_line(&mut input).await? {
+            0 => return Ok((stream, Message::Disconnected)),
+            n => {
+                match serde_json::from_str(&input[..n]) {
+                    Ok(input) => {
+                        return Ok((
+                            stream,
+                            match input {
+                                Input::Connected { version } => {
+                                    dbg!(version);
 
-        loop {
-            match stream.read_line(&mut input).await? {
-                0 => return Ok((stream, Message::Disconnected)),
-                _ => {
-                    match serde_json::from_str(&input) {
-                        Ok(input) => match input {
-                            Input::Connected { title, version } => {
-                                dbg!(&title, version);
+                                    Message::Connected
+                                }
+                                Input::PerformanceReported(performance) => {
+                                    dbg!(performance);
 
-                                return Ok((stream, Message::Connected { title }));
-                            }
-                        },
-                        Err(_) => {
-                            // TODO: Log decoding error
-                        }
+                                    Message::PerformanceReported(performance)
+                                }
+                            },
+                        ))
+                    }
+                    Err(_) => {
+                        // TODO: Log decoding error
                     }
                 }
             }

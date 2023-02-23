@@ -16,7 +16,7 @@ struct Inspector {
 
 #[derive(Debug)]
 enum State {
-    Connected { title: String },
+    Connected,
     Disconnected,
 }
 
@@ -43,11 +43,14 @@ impl Application for Inspector {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::Server(message) => match message {
-                server::Message::Connected { title } => {
-                    self.state = State::Connected { title };
+                server::Message::Connected => {
+                    self.state = State::Connected;
                 }
                 server::Message::Disconnected => {
                     self.state = State::Disconnected;
+                }
+                server::Message::PerformanceReported(_performance) => {
+                    // TODO
                 }
             },
         }
@@ -57,7 +60,7 @@ impl Application for Inspector {
 
     fn view(&self) -> Element<Self::Message> {
         let content = match &self.state {
-            State::Connected { title } => text(format!("Connected to {title}")),
+            State::Connected => text(format!("Connected!")),
             State::Disconnected => text("Waiting for incoming connection..."),
         };
 
