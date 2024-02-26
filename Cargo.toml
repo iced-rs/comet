@@ -1,22 +1,17 @@
 [package]
-name = "iced_inspector"
+name = "iced_axe"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 
 [dependencies.iced]
-version = "0.8"
+version = "0.13.0-dev"
 features = ["tokio"]
-git = "https://github.com/iced-rs/iced.git"
-rev = "1fb413fd8014ad5911a95292bcfbeadb5a58d72f"
 
-[dependencies.protocol]
-version = "0.1.0"
-package = "iced_inspector_protocol"
-path = "protocol"
+[dependencies.iced_sentinel]
+version = "0.13.0-dev"
 
-[workspace]
-members = [
-  "protocol",
-]
+[patch.crates-io]
+iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "dd36893f7ae0cc2071763da2bb0ca17e3c6a59d5" }
+iced_sentinel = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "dd36893f7ae0cc2071763da2bb0ca17e3c6a59d5" }

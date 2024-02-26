@@ -3,7 +3,7 @@ use iced::subscription::{self, Subscription};
 use iced::theme::Theme;
 use iced::widget::{container, text};
 use iced::{Application, Command, Element, Length, Settings};
-use protocol::server;
+use iced_sentinel as sentinel;
 
 pub fn main() -> iced::Result {
     Inspector::run(Settings::default())
@@ -22,7 +22,7 @@ enum State {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Server(server::Message),
+    Server(sentinel::Event),
 }
 
 impl Application for Inspector {
@@ -43,13 +43,13 @@ impl Application for Inspector {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::Server(message) => match message {
-                server::Message::Connected => {
+                sentinel::Event::Connected(_version) => {
                     self.state = State::Connected;
                 }
-                server::Message::Disconnected => {
+                sentinel::Event::Disconnected => {
                     self.state = State::Disconnected;
                 }
-                server::Message::PerformanceReported(_performance) => {
+                sentinel::Event::Reported(_report) => {
                     // TODO
                 }
             },
@@ -73,7 +73,7 @@ impl Application for Inspector {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        subscription::run(server::run).map(Message::Server)
+        subscription::run(sentinel::run).map(Message::Server)
     }
 
     fn title(&self) -> String {
