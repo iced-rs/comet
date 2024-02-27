@@ -13,5 +13,7 @@ features = ["tokio"]
 version = "0.13.0-dev"
 
 [patch.crates-io]
-iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1" }
-iced_sentinel = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1" }
+iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "0870b158d7a5b3ad70fc3a530e2e3d8f06eac774" }
+iced_sentinel = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "0870b158d7a5b3ad70fc3a530e2e3d8f06eac774" }
+# iced = { path = "../../iced" }
+# iced_sentinel = { path = "../../iced/sentinel" }

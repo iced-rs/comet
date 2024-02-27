@@ -152,6 +152,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bit-set"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -999,7 +1008,7 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 [[package]]
 name = "iced"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1021,7 +1030,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "bitflags 2.4.2",
  "glam",
@@ -1039,7 +1048,7 @@ dependencies = [
 [[package]]
 name = "iced_debug"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "iced_core",
  "iced_style",
@@ -1048,7 +1057,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "futures",
  "iced_core",
@@ -1061,7 +1070,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "bitflags 2.4.2",
  "bytemuck",
@@ -1081,7 +1090,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -1093,7 +1102,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1105,22 +1114,22 @@ dependencies = [
 [[package]]
 name = "iced_sentinel"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
+ "bincode",
  "futures",
  "iced_core",
  "iced_style",
  "log",
  "semver",
  "serde",
- "serde_json",
  "tokio",
 ]
 
 [[package]]
 name = "iced_style"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -1131,7 +1140,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -1147,7 +1156,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "bitflags 2.4.2",
  "bytemuck",
@@ -1164,7 +1173,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "iced_renderer",
  "iced_runtime",
@@ -1177,7 +1186,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1#4f8ed7d6ee09c75fb5e9b3cd7bcf68086e602bc1"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=0870b158d7a5b3ad70fc3a530e2e3d8f06eac774#0870b158d7a5b3ad70fc3a530e2e3d8f06eac774"
 dependencies = [
  "iced_graphics",
  "iced_runtime",
@@ -1220,12 +1229,6 @@ checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
 dependencies = [
  "cfg-if",
 ]
-
-[[package]]
-name = "itoa"
-version = "1.0.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 
 [[package]]
 name = "jni"
@@ -1960,12 +1963,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ryu"
-version = "1.0.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e86697c916019a8588c99b5fac3cead74ec0b4b819707a682fd4d23fa0ce1ba1"
-
-[[package]]
 name = "same-file"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2032,17 +2029,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.50",
-]
-
-[[package]]
-name = "serde_json"
-version = "1.0.114"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5f09b1bd632ef549eaa9f60a1f8de742bdbc698e6cee2095fc84dde5f549ae0"
-dependencies = [
- "itoa",
- "ryu",
- "serde",
 ]
 
 [[package]]
