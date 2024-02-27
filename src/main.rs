@@ -12,6 +12,7 @@ pub fn main() -> iced::Result {
 #[derive(Debug)]
 struct Inspector {
     state: State,
+    theme: Theme,
 }
 
 #[derive(Debug)]
@@ -35,6 +36,7 @@ impl Application for Inspector {
         (
             Inspector {
                 state: State::Disconnected,
+                theme: Theme::CatppuccinMocha,
             },
             Command::none(),
         )
@@ -49,8 +51,11 @@ impl Application for Inspector {
                 sentinel::Event::Disconnected => {
                     self.state = State::Disconnected;
                 }
-                sentinel::Event::Reported(_report) => {
+                sentinel::Event::TimingMeasured(_timing) => {
                     // TODO
+                }
+                sentinel::Event::ThemeChanged(palette) => {
+                    self.theme = Theme::custom(String::from("Custom"), palette);
                 }
             },
         }
@@ -81,6 +86,6 @@ impl Application for Inspector {
     }
 
     fn theme(&self) -> Self::Theme {
-        Theme::Dark
+        self.theme.clone()
     }
 }
