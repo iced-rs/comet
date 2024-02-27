@@ -1,7 +1,5 @@
 use iced_sentinel as sentinel;
 
-use crate::sentinel::Version;
-
 use iced::executor;
 use iced::subscription::{self, Subscription};
 use iced::theme::Theme;
@@ -20,13 +18,13 @@ struct Inspector {
 
 #[derive(Debug)]
 enum State {
-    Connected(Version),
+    Connected(sentinel::Version),
     Disconnected,
 }
 
 #[derive(Debug, Clone)]
 enum Message {
-    Server(sentinel::Event),
+    EventReported(sentinel::Event),
 }
 
 impl Application for Inspector {
@@ -47,7 +45,7 @@ impl Application for Inspector {
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
-            Message::Server(message) => match message {
+            Message::EventReported(event) => match event {
                 sentinel::Event::Connected(version) => {
                     self.state = State::Connected(version);
                 }
@@ -81,7 +79,7 @@ impl Application for Inspector {
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
-        subscription::run(sentinel::run).map(Message::Server)
+        subscription::run(sentinel::run).map(Message::EventReported)
     }
 
     fn title(&self) -> String {
