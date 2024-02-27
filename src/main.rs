@@ -1,9 +1,12 @@
+use iced_sentinel as sentinel;
+
+use crate::sentinel::Version;
+
 use iced::executor;
 use iced::subscription::{self, Subscription};
 use iced::theme::Theme;
 use iced::widget::{container, text};
 use iced::{Application, Command, Element, Length, Settings};
-use iced_sentinel as sentinel;
 
 pub fn main() -> iced::Result {
     Inspector::run(Settings::default())
@@ -17,7 +20,7 @@ struct Inspector {
 
 #[derive(Debug)]
 enum State {
-    Connected,
+    Connected(Version),
     Disconnected,
 }
 
@@ -45,8 +48,8 @@ impl Application for Inspector {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::Server(message) => match message {
-                sentinel::Event::Connected(_version) => {
-                    self.state = State::Connected;
+                sentinel::Event::Connected(version) => {
+                    self.state = State::Connected(version);
                 }
                 sentinel::Event::Disconnected => {
                     self.state = State::Disconnected;
@@ -65,7 +68,7 @@ impl Application for Inspector {
 
     fn view(&self) -> Element<Self::Message> {
         let content = match &self.state {
-            State::Connected => text(format!("Connected!")),
+            State::Connected(version) => text(format!("Connected! ({version})")),
             State::Disconnected => text("Waiting for incoming connection..."),
         };
 
