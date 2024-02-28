@@ -85,6 +85,7 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
 
             for (i, timing) in timings.enumerate() {
                 let bar_height = (timing.duration.as_nanos() as f64 * pixels_per_nanosecond) as f32;
+
                 frame.fill_rectangle(
                     Point::new(
                         bounds.width - BAR_WIDTH * i as f32 + 1.0,

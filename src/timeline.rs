@@ -1,18 +1,27 @@
 use crate::sentinel;
 use crate::sentinel::timing::{self, Timing};
 
+use std::collections::VecDeque;
+
 #[derive(Debug, Clone, Default)]
 pub struct Timeline {
-    events: Vec<sentinel::Event>,
+    events: VecDeque<sentinel::Event>,
 }
 
 impl Timeline {
+    // TODO: Make configurable
+    const MAX_SIZE: usize = 1_000_000;
+
     pub fn new() -> Self {
         Self::default()
     }
 
     pub fn push(&mut self, event: sentinel::Event) {
-        self.events.push(event);
+        self.events.push_back(event);
+
+        if self.events.len() > Self::MAX_SIZE {
+            self.events.pop_front();
+        }
     }
 
     pub fn len(&self) -> usize {
