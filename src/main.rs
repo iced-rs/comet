@@ -1,10 +1,20 @@
 use iced_sentinel as sentinel;
 
+mod module;
+mod timeline;
+
+pub use module::Module;
+pub use timeline::Timeline;
+
+use crate::sentinel::timing;
+
 use iced::executor;
 use iced::subscription::{self, Subscription};
 use iced::theme::Theme;
-use iced::widget::{container, text};
-use iced::{Application, Command, Element, Length, Settings};
+use iced::time::SystemTime;
+use iced::widget::{column, horizontal_space, pane_grid, row, text};
+use iced::window;
+use iced::{Application, Command, Element, Settings};
 
 pub fn main() -> iced::Result {
     Inspector::run(Settings::default())
@@ -14,12 +24,14 @@ pub fn main() -> iced::Result {
 struct Inspector {
     state: State,
     theme: Theme,
+    timeline: Timeline,
+    modules: pane_grid::State<Module>,
 }
 
 #[derive(Debug)]
 enum State {
-    Connected(sentinel::Version),
-    Disconnected,
+    Connected { version: sentinel::Version },
+    Disconnected { at: Option<SystemTime> },
 }
 
 #[derive(Debug, Clone)]
@@ -34,10 +46,16 @@ impl Application for Inspector {
     type Flags = ();
 
     fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
+        let (modules, _) = pane_grid::State::new(Module::performance_chart(timing::Stage::Render(
+            window::Id::MAIN,
+        )));
+
         (
             Inspector {
-                state: State::Disconnected,
+                state: State::Disconnected { at: None },
                 theme: Theme::CatppuccinMocha,
+                timeline: Timeline::new(),
+                modules,
             },
             Command::none(),
         )
@@ -45,37 +63,54 @@ impl Application for Inspector {
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
-            Message::EventReported(event) => match event {
-                sentinel::Event::Connected(version) => {
-                    self.state = State::Connected(version);
+            Message::EventReported(event) => {
+                for (_, module) in self.modules.iter_mut() {
+                    module.invalidate(&event);
                 }
-                sentinel::Event::Disconnected => {
-                    self.state = State::Disconnected;
+
+                match event.clone() {
+                    sentinel::Event::Connected { version, .. } => {
+                        self.state = State::Connected { version };
+                    }
+                    sentinel::Event::Disconnected { at } => {
+                        self.state = State::Disconnected { at: Some(at) };
+                    }
+                    sentinel::Event::TimingMeasured(_timing) => {
+                        // TODO
+                    }
+                    sentinel::Event::ThemeChanged { palette, .. } => {
+                        self.theme = Theme::custom(String::from("Custom"), palette);
+                    }
                 }
-                sentinel::Event::TimingMeasured(_timing) => {
-                    // TODO
-                }
-                sentinel::Event::ThemeChanged(palette) => {
-                    self.theme = Theme::custom(String::from("Custom"), palette);
-                }
-            },
+
+                self.timeline.push(event);
+            }
         }
 
         Command::none()
     }
 
     fn view(&self) -> Element<Self::Message> {
-        let content = match &self.state {
-            State::Connected(version) => text(format!("Connected! ({version})")),
-            State::Disconnected => text("Waiting for incoming connection..."),
+        let footer = {
+            let status = match &self.state {
+                State::Connected { version, .. } => text(format!("Connected! ({version})")),
+                State::Disconnected { at: None } => text("Disconnected"),
+                State::Disconnected { at: Some(at) } => text(format!("Disconnected ({at:?})")), // TODO: Proper time formatting
+            }
+            .size(12);
+
+            let counter = text(self.timeline.len()).size(12);
+
+            row![status, horizontal_space(), counter].spacing(10)
         };
 
-        container(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .center_x()
-            .center_y()
-            .into()
+        let modules = pane_grid(&self.modules, |_pane, module, _focused| {
+            let content = module.view(&self.timeline);
+
+            pane_grid::Content::new(content)
+        });
+
+        column![modules, footer].spacing(10).padding(10).into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

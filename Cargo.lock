@@ -674,6 +674,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "float_next_after"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bf7cc16383c4b8d58b9905a8509f02926ce3058053c056376248d958c9df1e8"
+
+[[package]]
 name = "font-types"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1008,7 +1014,7 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 [[package]]
 name = "iced"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1030,7 +1036,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "bitflags 2.4.2",
  "glam",
@@ -1048,7 +1054,7 @@ dependencies = [
 [[package]]
 name = "iced_debug"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "iced_core",
  "iced_style",
@@ -1057,7 +1063,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "futures",
  "iced_core",
@@ -1070,7 +1076,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "bitflags 2.4.2",
  "bytemuck",
@@ -1079,6 +1085,7 @@ dependencies = [
  "iced_core",
  "iced_futures",
  "log",
+ "lyon_path",
  "once_cell",
  "raw-window-handle",
  "rustc-hash",
@@ -1090,7 +1097,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -1102,7 +1109,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1114,7 +1121,7 @@ dependencies = [
 [[package]]
 name = "iced_sentinel"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "bincode",
  "futures",
@@ -1129,7 +1136,7 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -1140,7 +1147,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -1156,7 +1163,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "bitflags 2.4.2",
  "bytemuck",
@@ -1166,6 +1173,7 @@ dependencies = [
  "guillotiere",
  "iced_graphics",
  "log",
+ "lyon",
  "once_cell",
  "wgpu",
 ]
@@ -1173,7 +1181,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "iced_renderer",
  "iced_runtime",
@@ -1186,7 +1194,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=2b5b586e30e936ceb351222dcf72f880fc000d9b#2b5b586e30e936ceb351222dcf72f880fc000d9b"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
 dependencies = [
  "iced_graphics",
  "iced_runtime",
@@ -1369,6 +1377,58 @@ dependencies = [
 ]
 
 [[package]]
+name = "lyon"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91e7f9cda98b5430809e63ca5197b06c7d191bf7e26dfc467d5a3f0290e2a74f"
+dependencies = [
+ "lyon_algorithms",
+ "lyon_tessellation",
+]
+
+[[package]]
+name = "lyon_algorithms"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3bca95f9a4955b3e4a821fbbcd5edfbd9be2a9a50bb5758173e5358bfb4c623"
+dependencies = [
+ "lyon_path",
+ "num-traits",
+]
+
+[[package]]
+name = "lyon_geom"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edecfb8d234a2b0be031ab02ebcdd9f3b9ee418fb35e265f7a540a48d197bff9"
+dependencies = [
+ "arrayvec",
+ "euclid",
+ "num-traits",
+]
+
+[[package]]
+name = "lyon_path"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca507745ba7ccbc76e5c44e7b63b1a29d2b0d6126f375806a5bbaf657c7d6c45"
+dependencies = [
+ "lyon_geom",
+ "num-traits",
+]
+
+[[package]]
+name = "lyon_tessellation"
+version = "1.0.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c7c67b5bc8123b352b2e7e742b47d1f236a13fe77619433be9568fbd888e9c0"
+dependencies = [
+ "float_next_after",
+ "lyon_path",
+ "num-traits",
+]
+
+[[package]]
 name = "malloc_buf"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1494,6 +1554,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da0df0e5185db44f69b44f26786fe401b6c293d1907744beaa7fa62b2e5a517a"
 dependencies = [
  "autocfg",
+ "libm",
 ]
 
 [[package]]
