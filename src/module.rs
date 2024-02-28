@@ -2,9 +2,11 @@ use crate::sentinel;
 use crate::sentinel::timing;
 use crate::Timeline;
 
+use iced::alignment;
 use iced::mouse;
+use iced::time::Duration;
 use iced::widget::{canvas, container};
-use iced::{Element, Length, Point, Rectangle, Renderer, Size, Theme};
+use iced::{Element, Font, Length, Pixels, Point, Rectangle, Renderer, Size, Theme};
 
 #[derive(Debug)]
 pub enum Module {
@@ -74,7 +76,7 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
         _cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         // TODO: Configurable zoom
-        const BAR_WIDTH: f32 = 22.0;
+        const BAR_WIDTH: f32 = 10.0;
 
         let geometry = self.cache.draw(renderer, bounds.size(), |frame| {
             let bounds = frame.size();
@@ -83,24 +85,62 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
             let amount = (bounds.width / BAR_WIDTH).ceil() as usize + 1;
             let timings = self.timeline.timings(&self.stage).rev().take(amount);
 
-            let Some(max_duration) = timings.clone().map(|timing| timing.duration).max() else {
+            let Some(max) = timings.clone().map(|timing| timing.duration).max() else {
                 return;
             };
 
-            let pixels_per_nanosecond = f64::from(bounds.height) / max_duration.as_nanos() as f64;
+            let average: Duration = timings
+                .clone()
+                .map(|timing| timing.duration)
+                .sum::<Duration>()
+                / amount as u32;
+
+            let average_pixels = f64::from(bounds.height) / (2.0 * average.as_nanos() as f64);
+            let max_pixels = f64::from(bounds.height) / max.as_nanos() as f64;
+
+            let pixels_per_nanosecond = average_pixels.min(max_pixels);
 
             for (i, timing) in timings.enumerate() {
-                let bar_height = (timing.duration.as_nanos() as f64 * pixels_per_nanosecond) as f32;
+                let timing_nanos = timing.duration.as_nanos() as f64;
+                let bar_height = (timing_nanos * pixels_per_nanosecond) as f32;
 
                 frame.fill_rectangle(
                     Point::new(
-                        bounds.width - BAR_WIDTH * i as f32 + 1.0,
+                        bounds.width - BAR_WIDTH * i as f32,
                         bounds.height - bar_height,
                     ),
-                    Size::new(BAR_WIDTH - 2.0, bar_height),
-                    palette.background.base.text,
+                    Size::new(BAR_WIDTH, bar_height),
+                    if timing_nanos < average.as_nanos() as f64 * 0.75 {
+                        palette.success.base.color
+                    } else if timing_nanos > average.as_nanos() as f64 * 1.5 {
+                        palette.danger.base.color
+                    } else {
+                        palette.background.strong.color
+                    },
                 )
             }
+
+            frame.fill_text(canvas::Text {
+                content: format!("Average: {average:?}"),
+                position: Point::ORIGIN,
+                color: palette.background.strong.text,
+                size: Pixels(16.0),
+                horizontal_alignment: alignment::Horizontal::Left,
+                vertical_alignment: alignment::Vertical::Top,
+                font: Font::MONOSPACE,
+                ..canvas::Text::default()
+            });
+
+            frame.fill_text(canvas::Text {
+                content: format!("Maximum: {max:?}"),
+                position: Point::new(0.0, 20.0),
+                color: palette.background.strong.text,
+                size: Pixels(16.0),
+                horizontal_alignment: alignment::Horizontal::Left,
+                vertical_alignment: alignment::Vertical::Top,
+                font: Font::MONOSPACE,
+                ..canvas::Text::default()
+            });
         });
 
         vec![geometry]
