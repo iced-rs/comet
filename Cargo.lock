@@ -1014,7 +1014,7 @@ checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 [[package]]
 name = "iced"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1036,7 +1036,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "bitflags 2.4.2",
  "glam",
@@ -1054,16 +1054,18 @@ dependencies = [
 [[package]]
 name = "iced_debug"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "iced_core",
+ "iced_sentinel",
  "iced_style",
+ "once_cell",
 ]
 
 [[package]]
 name = "iced_futures"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "futures",
  "iced_core",
@@ -1076,7 +1078,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "bitflags 2.4.2",
  "bytemuck",
@@ -1097,7 +1099,7 @@ dependencies = [
 [[package]]
 name = "iced_renderer"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "iced_graphics",
  "iced_tiny_skia",
@@ -1109,7 +1111,7 @@ dependencies = [
 [[package]]
 name = "iced_runtime"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "iced_core",
  "iced_debug",
@@ -1121,7 +1123,7 @@ dependencies = [
 [[package]]
 name = "iced_sentinel"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "bincode",
  "futures",
@@ -1136,7 +1138,7 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -1147,7 +1149,7 @@ dependencies = [
 [[package]]
 name = "iced_tiny_skia"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "bytemuck",
  "cosmic-text",
@@ -1163,7 +1165,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "bitflags 2.4.2",
  "bytemuck",
@@ -1181,7 +1183,7 @@ dependencies = [
 [[package]]
 name = "iced_widget"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "iced_renderer",
  "iced_runtime",
@@ -1194,7 +1196,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.13.0-dev"
-source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=df62075040ff18859d9821c706a285818276c1ea#df62075040ff18859d9821c706a285818276c1ea"
+source = "git+ssh://git@gitlab.com/hecrj/iced.git?rev=1fda2d151d97d80806bce85cf77bbd2b5c9f61a3#1fda2d151d97d80806bce85cf77bbd2b5c9f61a3"
 dependencies = [
  "iced_graphics",
  "iced_runtime",

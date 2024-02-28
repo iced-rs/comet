@@ -22,6 +22,12 @@ impl Module {
         }
     }
 
+    pub fn title(&self) -> String {
+        match self {
+            Self::PerformanceChart { stage, .. } => format!("Performance - {stage}"),
+        }
+    }
+
     pub fn invalidate(&mut self, event: &sentinel::Event) {
         match (self, event) {
             (Self::PerformanceChart { stage, cache }, sentinel::Event::TimingMeasured(timing))

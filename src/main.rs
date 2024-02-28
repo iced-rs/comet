@@ -46,9 +46,15 @@ impl Application for Inspector {
     type Flags = ();
 
     fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        let (modules, _) = pane_grid::State::new(Module::performance_chart(timing::Stage::Render(
-            window::Id::MAIN,
-        )));
+        let (mut modules, pane) = pane_grid::State::new(Module::performance_chart(
+            timing::Stage::Render(window::Id::MAIN),
+        ));
+
+        modules.split(
+            pane_grid::Axis::Vertical,
+            pane,
+            Module::performance_chart(timing::Stage::Layout(window::Id::MAIN)),
+        );
 
         (
             Inspector {
@@ -75,9 +81,7 @@ impl Application for Inspector {
                     sentinel::Event::Disconnected { at } => {
                         self.state = State::Disconnected { at: Some(at) };
                     }
-                    sentinel::Event::TimingMeasured(_timing) => {
-                        // TODO
-                    }
+                    sentinel::Event::TimingMeasured(_timing) => {}
                     sentinel::Event::ThemeChanged { palette, .. } => {
                         self.theme = Theme::custom(String::from("Custom"), palette);
                     }
@@ -107,7 +111,9 @@ impl Application for Inspector {
         let modules = pane_grid(&self.modules, |_pane, module, _focused| {
             let content = module.view(&self.timeline);
 
-            pane_grid::Content::new(content)
+            let title_bar = pane_grid::TitleBar::new(text(module.title()));
+
+            pane_grid::Content::new(content).title_bar(title_bar)
         });
 
         column![modules, footer].spacing(10).padding(10).into()
