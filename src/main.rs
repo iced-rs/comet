@@ -132,7 +132,8 @@ impl Application for Inspector {
             let title_bar = pane_grid::TitleBar::new(text(module.title()));
 
             pane_grid::Content::new(content).title_bar(title_bar)
-        });
+        })
+        .spacing(10);
 
         column![modules, footer].spacing(10).padding(10).into()
     }

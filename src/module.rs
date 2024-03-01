@@ -5,7 +5,7 @@ use crate::Timeline;
 use iced::alignment;
 use iced::mouse;
 use iced::time::Duration;
-use iced::widget::{canvas, container};
+use iced::widget::canvas;
 use iced::{Element, Font, Length, Pixels, Point, Rectangle, Renderer, Size, Theme};
 
 #[derive(Debug)]
@@ -43,16 +43,13 @@ impl Module {
 
     pub fn view<'a, Message: 'a>(&'a self, timeline: &'a Timeline) -> Element<'a, Message> {
         match self {
-            Self::PerformanceChart { stage, cache } => container(
-                canvas(PerformanceChart {
-                    timeline,
-                    cache,
-                    stage: stage.clone(),
-                })
-                .width(Length::Fill)
-                .height(Length::Fill),
-            )
-            .padding(10)
+            Self::PerformanceChart { stage, cache } => canvas(PerformanceChart {
+                timeline,
+                cache,
+                stage: stage.clone(),
+            })
+            .width(Length::Fill)
+            .height(Length::Fill)
             .into(),
         }
     }
