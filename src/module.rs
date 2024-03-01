@@ -119,9 +119,9 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
 
             frame.fill_text(canvas::Text {
                 content: format!("Average: {average:?}"),
-                position: Point::ORIGIN,
-                color: palette.background.strong.text,
-                size: Pixels(16.0),
+                position: Point::new(4.0, 4.0),
+                color: palette.background.base.text,
+                size: Pixels(14.0),
                 horizontal_alignment: alignment::Horizontal::Left,
                 vertical_alignment: alignment::Vertical::Top,
                 font: Font::MONOSPACE,
@@ -130,9 +130,9 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
 
             frame.fill_text(canvas::Text {
                 content: format!("Maximum: {max:?}"),
-                position: Point::new(0.0, 20.0),
-                color: palette.background.strong.text,
-                size: Pixels(16.0),
+                position: Point::new(4.0, 22.0),
+                color: palette.background.base.text,
+                size: Pixels(14.0),
                 horizontal_alignment: alignment::Horizontal::Left,
                 vertical_alignment: alignment::Vertical::Top,
                 font: Font::MONOSPACE,
