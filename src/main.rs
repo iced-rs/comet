@@ -47,14 +47,29 @@ impl Application for Inspector {
     type Flags = ();
 
     fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        let (mut modules, pane) = pane_grid::State::new(Module::performance_chart(
-            timing::Stage::Render(window::Id::MAIN),
-        ));
+        let (mut modules, update) =
+            pane_grid::State::new(Module::performance_chart(timing::Stage::Update));
+
+        let (draw, _) = modules
+            .split(
+                pane_grid::Axis::Vertical,
+                update,
+                Module::performance_chart(timing::Stage::Draw(window::Id::MAIN)),
+            )
+            .unwrap();
+
+        let (_view, _) = modules
+            .split(
+                pane_grid::Axis::Horizontal,
+                update,
+                Module::performance_chart(timing::Stage::View(window::Id::MAIN)),
+            )
+            .unwrap();
 
         modules.split(
-            pane_grid::Axis::Vertical,
-            pane,
-            Module::performance_chart(timing::Stage::Layout(window::Id::MAIN)),
+            pane_grid::Axis::Horizontal,
+            draw,
+            Module::performance_chart(timing::Stage::Render(window::Id::MAIN)),
         );
 
         (
