@@ -75,7 +75,7 @@ impl Application for Inspector {
         (
             Inspector {
                 state: State::Disconnected { at: None },
-                theme: Theme::CatppuccinMocha,
+                theme: Theme::TokyoNight,
                 timeline: Timeline::new(),
                 modules,
             },
