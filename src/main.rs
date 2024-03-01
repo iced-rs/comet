@@ -89,7 +89,7 @@ impl Application for Inspector {
                 debug::skip_next_timing();
 
                 for (_, module) in self.modules.iter_mut() {
-                    module.invalidate(&event);
+                    module.invalidate_by(&event);
                 }
 
                 match event.clone() {

@@ -30,14 +30,25 @@ impl Module {
         }
     }
 
-    pub fn invalidate(&mut self, event: &sentinel::Event) {
-        match (self, event) {
-            (Self::PerformanceChart { stage, cache }, sentinel::Event::TimingMeasured(timing))
-                if &timing.stage == stage =>
-            {
+    pub fn invalidate(&mut self) {
+        match self {
+            Self::PerformanceChart { cache, .. } => {
                 cache.clear();
             }
-            _ => {}
+        }
+    }
+
+    pub fn invalidate_by(&mut self, event: &sentinel::Event) {
+        let should_invalidate = match (&self, event) {
+            (Self::PerformanceChart { stage, .. }, sentinel::Event::TimingMeasured(timing)) => {
+                &timing.stage == stage
+            }
+            (Self::PerformanceChart { .. }, sentinel::Event::ThemeChanged { .. }) => true,
+            _ => false,
+        };
+
+        if should_invalidate {
+            self.invalidate();
         }
     }
 
