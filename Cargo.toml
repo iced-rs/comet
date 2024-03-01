@@ -10,13 +10,13 @@ debug = ["iced/debug"]
 
 [dependencies.iced]
 version = "0.13.0-dev"
-features = ["tokio", "canvas"]
+features = ["tokio", "canvas", "advanced"]
 
 [dependencies.iced_sentinel]
 version = "0.13.0-dev"
 
 [patch.crates-io]
-iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "1fda2d151d97d80806bce85cf77bbd2b5c9f61a3" }
-iced_sentinel = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "1fda2d151d97d80806bce85cf77bbd2b5c9f61a3" }
+iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "d7413a00135fe7dee5684f88329af091d6b824b5" }
+iced_sentinel = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "d7413a00135fe7dee5684f88329af091d6b824b5" }
 # iced = { path = "../../iced" }
 # iced_sentinel = { path = "../../iced/sentinel" }

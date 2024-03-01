@@ -8,6 +8,7 @@ pub use timeline::Timeline;
 
 use crate::sentinel::timing;
 
+use iced::advanced::debug;
 use iced::executor;
 use iced::subscription::{self, Subscription};
 use iced::theme::Theme;
@@ -70,6 +71,8 @@ impl Application for Inspector {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::EventReported(event) => {
+                debug::skip_next_timing();
+
                 for (_, module) in self.modules.iter_mut() {
                     module.invalidate(&event);
                 }
