@@ -91,24 +91,30 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
             let palette = theme.extended_palette();
 
             let amount = (bounds.width / BAR_WIDTH).ceil() as usize + 1;
-            let timings = self.timeline.timings(&self.stage).rev().take(amount);
+            let timings = self.timeline.timings(&self.stage).rev();
 
-            let Some(max) = timings.clone().map(|timing| timing.duration).max() else {
+            let Some(max) = timings
+                .clone()
+                .take(amount)
+                .map(|timing| timing.duration)
+                .max()
+            else {
                 return;
             };
 
             let average: Duration = timings
                 .clone()
+                .take(amount * 3)
                 .map(|timing| timing.duration)
                 .sum::<Duration>()
-                / amount as u32;
+                / (3 * amount) as u32;
 
             let average_pixels = f64::from(bounds.height) / (2.0 * average.as_nanos() as f64);
             let max_pixels = f64::from(bounds.height) / max.as_nanos() as f64;
 
             let pixels_per_nanosecond = average_pixels.min(max_pixels);
 
-            for (i, timing) in timings.enumerate() {
+            for (i, timing) in timings.take(amount).enumerate() {
                 let timing_nanos = timing.duration.as_nanos() as f64;
                 let bar_height = (timing_nanos * pixels_per_nanosecond) as f32;
 
