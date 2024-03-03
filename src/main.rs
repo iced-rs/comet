@@ -11,11 +11,11 @@ use crate::sentinel::timing;
 use iced::advanced::debug;
 use iced::executor;
 use iced::subscription::{self, Subscription};
-use iced::theme::Theme;
+use iced::theme::{self, Theme};
 use iced::time::SystemTime;
-use iced::widget::{column, horizontal_space, pane_grid, row, text};
+use iced::widget::{button, column, horizontal_space, pane_grid, row, slider, text};
 use iced::window;
-use iced::{Application, Command, Element, Settings};
+use iced::{Alignment, Application, Command, Element, Settings};
 
 pub fn main() -> iced::Result {
     Inspector::run(Settings::default())
@@ -26,6 +26,7 @@ struct Inspector {
     state: State,
     theme: Theme,
     timeline: Timeline,
+    playhead: timeline::Index,
     modules: pane_grid::State<Module>,
 }
 
@@ -38,6 +39,8 @@ enum State {
 #[derive(Debug, Clone)]
 enum Message {
     EventReported(sentinel::Event),
+    PlayheadChanged(timeline::Index),
+    GoLive,
 }
 
 impl Application for Inspector {
@@ -77,6 +80,7 @@ impl Application for Inspector {
                 state: State::Disconnected { at: None },
                 theme: Theme::TokyoNight,
                 timeline: Timeline::new(),
+                playhead: timeline::Index::default(),
                 modules,
             },
             Command::none(),
@@ -105,7 +109,22 @@ impl Application for Inspector {
                     }
                 }
 
-                self.timeline.push(event);
+                let is_live = self.timeline.is_live(self.playhead);
+                let latest = self.timeline.push(event);
+
+                if is_live {
+                    self.playhead = latest;
+                }
+            }
+            Message::PlayheadChanged(playhead) => {
+                for (_, module) in self.modules.iter_mut() {
+                    module.invalidate();
+                }
+
+                self.playhead = playhead;
+            }
+            Message::GoLive => {
+                self.playhead = *self.timeline.range().end();
             }
         }
 
@@ -113,7 +132,7 @@ impl Application for Inspector {
     }
 
     fn view(&self) -> Element<Self::Message> {
-        let footer = {
+        let header = {
             let status = match &self.state {
                 State::Connected { version, .. } => text(format!("Connected! ({version})")),
                 State::Disconnected { at: None } => text("Disconnected"),
@@ -127,7 +146,7 @@ impl Application for Inspector {
         };
 
         let modules = pane_grid(&self.modules, |_pane, module, _focused| {
-            let content = module.view(&self.timeline);
+            let content = module.view(&self.timeline, self.playhead);
 
             let title_bar = pane_grid::TitleBar::new(text(module.title()));
 
@@ -135,7 +154,24 @@ impl Application for Inspector {
         })
         .spacing(10);
 
-        column![modules, footer].spacing(10).padding(10).into()
+        let timeline = row![
+            slider(
+                self.timeline.range(),
+                self.playhead,
+                Message::PlayheadChanged,
+            ),
+            button(text("→").size(14))
+                .on_press_maybe((!self.timeline.is_live(self.playhead)).then_some(Message::GoLive))
+                .padding([2, 5])
+                .style(theme::Button::Secondary)
+        ]
+        .align_items(Alignment::Center)
+        .spacing(10);
+
+        column![header, modules, timeline]
+            .spacing(10)
+            .padding(10)
+            .into()
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {

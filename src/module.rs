@@ -1,6 +1,6 @@
 use crate::sentinel;
 use crate::sentinel::timing;
-use crate::Timeline;
+use crate::timeline::{self, Timeline};
 
 use iced::alignment;
 use iced::mouse;
@@ -52,10 +52,15 @@ impl Module {
         }
     }
 
-    pub fn view<'a, Message: 'a>(&'a self, timeline: &'a Timeline) -> Element<'a, Message> {
+    pub fn view<'a, Message: 'a>(
+        &'a self,
+        timeline: &'a Timeline,
+        playhead: timeline::Index,
+    ) -> Element<'a, Message> {
         match self {
             Self::PerformanceChart { stage, cache } => canvas(PerformanceChart {
                 timeline,
+                playhead,
                 cache,
                 stage: stage.clone(),
             })
@@ -68,6 +73,7 @@ impl Module {
 
 struct PerformanceChart<'a> {
     timeline: &'a Timeline,
+    playhead: timeline::Index,
     cache: &'a canvas::Cache,
     stage: timing::Stage,
 }
@@ -91,7 +97,7 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
             let palette = theme.extended_palette();
 
             let amount = (bounds.width / BAR_WIDTH).ceil() as usize + 1;
-            let timings = self.timeline.timings(&self.stage).rev();
+            let timings = self.timeline.timings(&self.stage, self.playhead);
 
             let Some(max) = timings
                 .clone()
