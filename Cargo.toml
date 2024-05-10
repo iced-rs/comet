@@ -1,5 +1,5 @@
 [package]
-name = "iced_axe"
+name = "iced_comet"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,16 +8,17 @@ debug = ["iced/debug"]
 
 [dependencies]
 num-traits = "0.2"
+tracing-subscriber = "0.3"
 
 [dependencies.iced]
 version = "0.13.0-dev"
-features = ["tokio", "canvas", "advanced"]
+features = ["tokio", "canvas", "svg", "web-colors", "advanced"]
 
-[dependencies.iced_sentinel]
+[dependencies.iced_beacon]
 version = "0.13.0-dev"
 
 [patch.crates-io]
-iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "d7413a00135fe7dee5684f88329af091d6b824b5" }
-iced_sentinel = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "d7413a00135fe7dee5684f88329af091d6b824b5" }
+iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "fc53a978314e40be4641fbe4459821e6cd63d2df" }
+iced_beacon = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "fc53a978314e40be4641fbe4459821e6cd63d2df" }
 # iced = { path = "../../iced" }
-# iced_sentinel = { path = "../../iced/sentinel" }
+# iced_beacon = { path = "../../iced/beacon" }

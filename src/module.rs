@@ -1,5 +1,5 @@
-use crate::sentinel;
-use crate::sentinel::timing;
+use crate::beacon;
+use crate::beacon::span;
 use crate::timeline::{self, Timeline};
 
 use iced::alignment;
@@ -11,13 +11,13 @@ use iced::{Element, Font, Length, Pixels, Point, Rectangle, Renderer, Size, Them
 #[derive(Debug)]
 pub enum Module {
     PerformanceChart {
-        stage: timing::Stage,
+        stage: span::Stage,
         cache: canvas::Cache,
     },
 }
 
 impl Module {
-    pub fn performance_chart(stage: timing::Stage) -> Self {
+    pub fn performance_chart(stage: span::Stage) -> Self {
         Self::PerformanceChart {
             stage,
             cache: canvas::Cache::new(),
@@ -26,7 +26,7 @@ impl Module {
 
     pub fn title(&self) -> String {
         match self {
-            Self::PerformanceChart { stage, .. } => format!("Performance - {stage}"),
+            Self::PerformanceChart { stage, .. } => stage.to_string(),
         }
     }
 
@@ -38,12 +38,12 @@ impl Module {
         }
     }
 
-    pub fn invalidate_by(&mut self, event: &sentinel::Event) {
+    pub fn invalidate_by(&mut self, event: &beacon::Event) {
         let should_invalidate = match (&self, event) {
-            (Self::PerformanceChart { stage, .. }, sentinel::Event::TimingMeasured(timing)) => {
-                &timing.stage == stage
+            (Self::PerformanceChart { stage, .. }, beacon::Event::SpanFinished { span, .. }) => {
+                &span.stage() == stage
             }
-            (Self::PerformanceChart { .. }, sentinel::Event::ThemeChanged { .. }) => true,
+            (Self::PerformanceChart { .. }, beacon::Event::ThemeChanged { .. }) => true,
             _ => false,
         };
 
@@ -75,7 +75,7 @@ struct PerformanceChart<'a> {
     timeline: &'a Timeline,
     playhead: timeline::Index,
     cache: &'a canvas::Cache,
-    stage: timing::Stage,
+    stage: span::Stage,
 }
 
 impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
@@ -97,32 +97,39 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
             let palette = theme.extended_palette();
 
             let amount = (bounds.width / BAR_WIDTH).ceil() as usize + 1;
-            let timings = self.timeline.timings(&self.stage, self.playhead);
+            let timeframes = self.timeline.timeframes(self.playhead, &self.stage);
 
-            let Some(max) = timings
+            let Some(max) = timeframes
                 .clone()
                 .take(amount)
-                .map(|timing| timing.duration)
+                .map(|timeframe| timeframe.duration)
                 .max()
             else {
                 return;
             };
 
-            let average: Duration = timings
-                .clone()
-                .take(amount * 3)
-                .map(|timing| timing.duration)
-                .sum::<Duration>()
-                / (3 * amount) as u32;
+            let average: Duration = {
+                let mut n = 0;
+
+                timeframes
+                    .clone()
+                    .take(amount * 3)
+                    .map(|timeframe| {
+                        n += 1;
+                        timeframe.duration
+                    })
+                    .sum::<Duration>()
+                    / n as u32
+            };
 
             let average_pixels = f64::from(bounds.height) / (2.0 * average.as_nanos() as f64);
             let max_pixels = f64::from(bounds.height) / max.as_nanos() as f64;
 
             let pixels_per_nanosecond = average_pixels.min(max_pixels);
 
-            for (i, timing) in timings.take(amount).enumerate() {
-                let timing_nanos = timing.duration.as_nanos() as f64;
-                let bar_height = (timing_nanos * pixels_per_nanosecond) as f32;
+            for (i, timeframe) in timeframes.take(amount).enumerate() {
+                let timeframe_nanos = timeframe.duration.as_nanos() as f64;
+                let bar_height = (timeframe_nanos * pixels_per_nanosecond) as f32;
 
                 frame.fill_rectangle(
                     Point::new(
@@ -130,9 +137,9 @@ impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {
                         bounds.height - bar_height,
                     ),
                     Size::new(BAR_WIDTH, bar_height),
-                    if timing_nanos < average.as_nanos() as f64 * 0.75 {
+                    if timeframe_nanos < average.as_nanos() as f64 * 0.75 {
                         palette.success.base.color
-                    } else if timing_nanos > average.as_nanos() as f64 * 1.5 {
+                    } else if timeframe_nanos > average.as_nanos() as f64 * 1.5 {
                         palette.danger.base.color
                     } else {
                         palette.background.strong.color

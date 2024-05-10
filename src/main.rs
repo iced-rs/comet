@@ -1,4 +1,5 @@
-use iced_sentinel as sentinel;
+use iced_beacon as beacon;
+use iced_beacon::core;
 
 mod module;
 mod timeline;
@@ -6,88 +7,86 @@ mod timeline;
 pub use module::Module;
 pub use timeline::Timeline;
 
-use crate::sentinel::timing;
+use crate::beacon::span;
 
 use iced::advanced::debug;
-use iced::executor;
+use iced::program;
 use iced::subscription::{self, Subscription};
-use iced::theme::{self, Theme};
 use iced::time::SystemTime;
-use iced::widget::{button, column, horizontal_space, pane_grid, row, slider, text};
+use iced::widget::{
+    button, center, column, container, horizontal_space, pane_grid, progress_bar, row, slider, svg,
+    text,
+};
 use iced::window;
-use iced::{Alignment, Application, Command, Element, Settings};
+use iced::{Alignment, Background, Border, Command, Element, Font, Point, Settings, Size, Theme};
 
 pub fn main() -> iced::Result {
-    Inspector::run(Settings::default())
+    tracing_subscriber::fmt::init();
+
+    program(Comet::title, Comet::update, Comet::view)
+        .subscription(Comet::subscription)
+        .theme(Comet::theme)
+        .settings(Settings {
+            window: window::Settings {
+                size: Size::new(800.0, 600.0),
+                position: window::Position::SpecificWith(|window, monitor| {
+                    Point::new(monitor.width - window.width - 5.0, 0.0)
+                }),
+                ..window::Settings::default()
+            },
+            ..Settings::default()
+        })
+        .run_with(Comet::new)
 }
 
 #[derive(Debug)]
-struct Inspector {
+struct Comet {
     state: State,
     theme: Theme,
     timeline: Timeline,
     playhead: timeline::Index,
     modules: pane_grid::State<Module>,
+    logo: svg::Handle,
 }
 
 #[derive(Debug)]
 enum State {
-    Connected { version: sentinel::Version },
-    Disconnected { at: Option<SystemTime> },
+    Waiting,
+    Working {
+        name: String,
+        connection: Connection,
+    },
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+enum Connection {
+    Connected { version: beacon::Version },
+    Disconnected { at: SystemTime },
 }
 
 #[derive(Debug, Clone)]
 enum Message {
-    EventReported(sentinel::Event),
+    EventReported(beacon::Event),
     PlayheadChanged(timeline::Index),
     GoLive,
 }
 
-impl Application for Inspector {
-    type Executor = executor::Default;
-    type Message = Message;
-    type Theme = Theme;
-    type Flags = ();
+impl Comet {
+    fn new() -> Self {
+        let logo = svg::Handle::from_memory(include_bytes!("../assets/logo.svg"));
 
-    fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        let (mut modules, update) =
-            pane_grid::State::new(Module::performance_chart(timing::Stage::Update));
-
-        let (draw, _) = modules
-            .split(
-                pane_grid::Axis::Vertical,
-                update,
-                Module::performance_chart(timing::Stage::Draw(window::Id::MAIN)),
-            )
-            .unwrap();
-
-        let (_view, _) = modules
-            .split(
-                pane_grid::Axis::Horizontal,
-                update,
-                Module::performance_chart(timing::Stage::View(window::Id::MAIN)),
-            )
-            .unwrap();
-
-        modules.split(
-            pane_grid::Axis::Horizontal,
-            draw,
-            Module::performance_chart(timing::Stage::Render(window::Id::MAIN)),
-        );
-
-        (
-            Inspector {
-                state: State::Disconnected { at: None },
-                theme: Theme::TokyoNight,
-                timeline: Timeline::new(),
-                playhead: timeline::Index::default(),
-                modules,
-            },
-            Command::none(),
-        )
+        Self {
+            state: State::Waiting,
+            theme: Theme::TokyoNight,
+            timeline: Timeline::new(),
+            playhead: timeline::Index::default(),
+            modules: pane_grid::State::with_configuration(performance_board()),
+            logo,
+        }
     }
 
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+    fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::EventReported(event) => {
                 debug::skip_next_timing();
@@ -97,16 +96,33 @@ impl Application for Inspector {
                 }
 
                 match event.clone() {
-                    sentinel::Event::Connected { version, .. } => {
-                        self.state = State::Connected { version };
+                    beacon::Event::Connected { name, version, .. } => {
+                        let current_name = match &self.state {
+                            State::Working { name, .. } => Some(name),
+                            State::Waiting => None,
+                        };
+
+                        if Some(&name) != current_name {
+                            self.playhead = timeline::Index::default();
+                            self.timeline.clear();
+                        }
+
+                        self.state = State::Working {
+                            name,
+                            connection: Connection::Connected { version },
+                        };
                     }
-                    sentinel::Event::Disconnected { at } => {
-                        self.state = State::Disconnected { at: Some(at) };
+                    beacon::Event::Disconnected { at } => {
+                        if let State::Working { connection, .. } = &mut self.state {
+                            *connection = Connection::Disconnected { at };
+                        }
                     }
-                    sentinel::Event::TimingMeasured(_timing) => {}
-                    sentinel::Event::ThemeChanged { palette, .. } => {
-                        self.theme = Theme::custom(String::from("Custom"), palette);
+                    beacon::Event::ThemeChanged { palette, .. } => {
+                        if let State::Working { name, .. } = &self.state {
+                            self.theme = Theme::custom(name.clone(), palette);
+                        }
                     }
+                    beacon::Event::SpanFinished { .. } => {}
                 }
 
                 let is_live = self.timeline.is_live(self.playhead);
@@ -131,58 +147,160 @@ impl Application for Inspector {
         Command::none()
     }
 
-    fn view(&self) -> Element<Self::Message> {
-        let header = {
-            let status = match &self.state {
-                State::Connected { version, .. } => text(format!("Connected! ({version})")),
-                State::Disconnected { at: None } => text("Disconnected"),
-                State::Disconnected { at: Some(at) } => text(format!("Disconnected ({at:?})")), // TODO: Proper time formatting
+    fn view(&self) -> Element<Message> {
+        match &self.state {
+            State::Waiting => center(
+                row![
+                    svg(self.logo.clone()).width(100).height(100),
+                    text("Comet").font(Font::MONOSPACE).size(70),
+                ]
+                .spacing(30)
+                .align_items(Alignment::Center),
+            )
+            .into(),
+            State::Working { name, connection } => {
+                let header = {
+                    let logo = row![
+                        svg(self.logo.clone()).width(24).height(24),
+                        text(name).font(Font::MONOSPACE).size(18),
+                    ]
+                    .spacing(10)
+                    .align_items(Alignment::Center);
+
+                    let status = container(horizontal_space()).width(8).height(8).style(
+                        move |theme: &Theme| {
+                            let palette = theme.palette();
+
+                            let color = match connection {
+                                Connection::Connected { .. } => palette.success,
+                                Connection::Disconnected { .. } => palette.danger,
+                            };
+
+                            container::Style {
+                                background: Some(Background::from(color)),
+                                border: Border::rounded(4),
+                                ..container::Style::default()
+                            }
+                        },
+                    );
+
+                    let counter = column![
+                        text(format!(
+                            "{} / {}",
+                            self.timeline.len(),
+                            self.timeline.capacity(),
+                        ))
+                        .font(Font::MONOSPACE)
+                        .size(8),
+                        progress_bar(
+                            0.0..=self.timeline.capacity() as f32,
+                            self.timeline.len() as f32
+                        )
+                        .height(3),
+                    ]
+                    .width(100)
+                    .spacing(2)
+                    .align_items(Alignment::End);
+
+                    row![logo, status, horizontal_space(), counter]
+                        .spacing(10)
+                        .align_items(Alignment::Center)
+                };
+
+                let modules = pane_grid(&self.modules, |_pane, module, _focused| {
+                    let content = module.view(&self.timeline, self.playhead);
+
+                    let title_bar = pane_grid::TitleBar::new(text(module.title()));
+
+                    pane_grid::Content::new(content).title_bar(title_bar)
+                })
+                .spacing(10);
+
+                let timeline = {
+                    row![
+                        slider(
+                            self.timeline.range(),
+                            self.playhead,
+                            Message::PlayheadChanged,
+                        ),
+                        button(text("→").size(14))
+                            .on_press_maybe(
+                                (!self.timeline.is_live(self.playhead)).then_some(Message::GoLive)
+                            )
+                            .padding([2, 5])
+                            .style(button::secondary),
+                    ]
+                    .align_items(Alignment::Center)
+                    .spacing(10)
+                };
+
+                column![header, modules, timeline]
+                    .spacing(10)
+                    .padding(10)
+                    .into()
             }
-            .size(12);
-
-            let counter = text(self.timeline.len()).size(12);
-
-            row![status, horizontal_space(), counter].spacing(10)
-        };
-
-        let modules = pane_grid(&self.modules, |_pane, module, _focused| {
-            let content = module.view(&self.timeline, self.playhead);
-
-            let title_bar = pane_grid::TitleBar::new(text(module.title()));
-
-            pane_grid::Content::new(content).title_bar(title_bar)
-        })
-        .spacing(10);
-
-        let timeline = row![
-            slider(
-                self.timeline.range(),
-                self.playhead,
-                Message::PlayheadChanged,
-            ),
-            button(text("→").size(14))
-                .on_press_maybe((!self.timeline.is_live(self.playhead)).then_some(Message::GoLive))
-                .padding([2, 5])
-                .style(theme::Button::Secondary)
-        ]
-        .align_items(Alignment::Center)
-        .spacing(10);
-
-        column![header, modules, timeline]
-            .spacing(10)
-            .padding(10)
-            .into()
+        }
     }
 
-    fn subscription(&self) -> Subscription<Self::Message> {
-        subscription::run(sentinel::run).map(Message::EventReported)
+    fn subscription(&self) -> Subscription<Message> {
+        subscription::run(beacon::run).map(Message::EventReported)
     }
 
     fn title(&self) -> String {
-        String::from("Inspector - Iced")
+        match &self.state {
+            State::Waiting => String::from("Comet"),
+            State::Working { name, .. } => format!("{name} - Comet"),
+        }
     }
 
-    fn theme(&self) -> Self::Theme {
+    fn theme(&self) -> Theme {
         self.theme.clone()
+    }
+}
+
+fn performance_board() -> pane_grid::Configuration<Module> {
+    let update_and_view = pane_grid::Configuration::Split {
+        axis: pane_grid::Axis::Vertical,
+        ratio: 0.5,
+        a: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
+            span::Stage::Update,
+        ))),
+        b: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
+            span::Stage::View(window::Id::MAIN),
+        ))),
+    };
+
+    let layout_and_interact = pane_grid::Configuration::Split {
+        axis: pane_grid::Axis::Vertical,
+        ratio: 0.5,
+        a: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
+            span::Stage::Layout(window::Id::MAIN),
+        ))),
+        b: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
+            span::Stage::Interact(window::Id::MAIN),
+        ))),
+    };
+
+    let draw_and_present = pane_grid::Configuration::Split {
+        axis: pane_grid::Axis::Vertical,
+        ratio: 0.5,
+        a: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
+            span::Stage::Draw(window::Id::MAIN),
+        ))),
+        b: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
+            span::Stage::Present(window::Id::MAIN),
+        ))),
+    };
+
+    pane_grid::Configuration::Split {
+        axis: pane_grid::Axis::Horizontal,
+        ratio: 1.0 / 3.0,
+        a: Box::new(update_and_view),
+        b: Box::new(pane_grid::Configuration::Split {
+            axis: pane_grid::Axis::Horizontal,
+            ratio: 0.5,
+            a: Box::new(layout_and_interact),
+            b: Box::new(draw_and_present),
+        }),
     }
 }
