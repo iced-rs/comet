@@ -10,6 +10,7 @@ pub use timeline::Timeline;
 use crate::beacon::span;
 
 use iced::advanced::debug;
+use iced::keyboard;
 use iced::program;
 use iced::subscription::{self, Subscription};
 use iced::time::SystemTime;
@@ -22,6 +23,11 @@ use iced::{Alignment, Background, Border, Command, Element, Font, Point, Setting
 
 pub fn main() -> iced::Result {
     tracing_subscriber::fmt::init();
+
+    if beacon::is_running() {
+        log::warn!("Comet is already running. Exiting...");
+        std::process::exit(0);
+    }
 
     program(Comet::title, Comet::update, Comet::view)
         .subscription(Comet::subscription)
@@ -70,6 +76,7 @@ enum Message {
     EventReported(beacon::Event),
     PlayheadChanged(timeline::Index),
     GoLive,
+    Quit,
 }
 
 impl Comet {
@@ -123,6 +130,9 @@ impl Comet {
                         }
                     }
                     beacon::Event::SpanFinished { .. } => {}
+                    beacon::Event::QuitRequested { .. } | beacon::Event::AlreadyRunning { .. } => {
+                        return window::close(window::Id::MAIN);
+                    }
                 }
 
                 let is_live = self.timeline.is_live(self.playhead);
@@ -141,6 +151,9 @@ impl Comet {
             }
             Message::GoLive => {
                 self.playhead = *self.timeline.range().end();
+            }
+            Message::Quit => {
+                return window::close(window::Id::MAIN);
             }
         }
 
@@ -210,7 +223,8 @@ impl Comet {
                 let modules = pane_grid(&self.modules, |_pane, module, _focused| {
                     let content = module.view(&self.timeline, self.playhead);
 
-                    let title_bar = pane_grid::TitleBar::new(text(module.title()));
+                    let title_bar =
+                        pane_grid::TitleBar::new(text(module.title()).font(Font::MONOSPACE));
 
                     pane_grid::Content::new(content).title_bar(title_bar)
                 })
@@ -243,7 +257,14 @@ impl Comet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        subscription::run(beacon::run).map(Message::EventReported)
+        let beacon = subscription::run(beacon::run).map(Message::EventReported);
+
+        let hotkeys = keyboard::on_key_press(|key, _| match key {
+            keyboard::Key::Named(keyboard::key::Named::F12) => Some(Message::Quit),
+            _ => None,
+        });
+
+        Subscription::batch([beacon, hotkeys])
     }
 
     fn title(&self) -> String {
