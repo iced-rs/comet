@@ -1,14 +1,14 @@
 use iced_beacon as beacon;
 use iced_beacon::core;
 
+mod board;
 mod module;
 mod timeline;
 mod widget;
 
-pub use module::Module;
-pub use timeline::Timeline;
-
-use crate::beacon::span;
+use crate::board::Board;
+use crate::module::Module;
+use crate::timeline::Timeline;
 use crate::widget::animated_text;
 
 use iced::advanced::debug;
@@ -17,8 +17,8 @@ use iced::program;
 use iced::subscription::{self, Subscription};
 use iced::time::SystemTime;
 use iced::widget::{
-    button, center, column, container, horizontal_space, pane_grid, progress_bar, row, slider, svg,
-    text,
+    button, center, column, container, horizontal_space, pane_grid, pick_list, progress_bar, row,
+    slider, svg, text, tooltip,
 };
 use iced::window;
 use iced::{Alignment, Background, Border, Command, Element, Font, Point, Settings, Size, Theme};
@@ -27,7 +27,7 @@ pub fn main() -> iced::Result {
     tracing_subscriber::fmt::init();
 
     if beacon::is_running() {
-        log::warn!("Comet is already running. Exiting...");
+        log::warn!("comet is already running. Exiting...");
         std::process::exit(0);
     }
 
@@ -53,6 +53,7 @@ struct Comet {
     theme: Theme,
     timeline: Timeline,
     playhead: timeline::Index,
+    board: Board,
     modules: pane_grid::State<Module>,
     logo: svg::Handle,
 }
@@ -79,18 +80,22 @@ enum Message {
     PlayheadChanged(timeline::Index),
     GoLive,
     Quit,
+    BoardChanged(Board),
 }
 
 impl Comet {
     fn new() -> Self {
         let logo = svg::Handle::from_memory(include_bytes!("../assets/logo.svg"));
+        let board = Board::Overview;
+        let modules = pane_grid::State::with_configuration(board.modules());
 
         Self {
             state: State::Waiting,
             theme: Theme::TokyoNight,
             timeline: Timeline::new(),
             playhead: timeline::Index::default(),
-            modules: pane_grid::State::with_configuration(performance_board()),
+            board,
+            modules,
             logo,
         }
     }
@@ -158,6 +163,10 @@ impl Comet {
             Message::Quit => {
                 return window::close(window::Id::MAIN);
             }
+            Message::BoardChanged(board) => {
+                self.board = board;
+                self.modules = pane_grid::State::with_configuration(board.modules());
+            }
         }
 
         Command::none()
@@ -200,25 +209,10 @@ impl Comet {
                         },
                     );
 
-                    let counter = column![
-                        text(format!(
-                            "{} / {}",
-                            self.timeline.len(),
-                            self.timeline.capacity(),
-                        ))
-                        .font(Font::MONOSPACE)
-                        .size(8),
-                        progress_bar(
-                            0.0..=self.timeline.capacity() as f32,
-                            self.timeline.len() as f32
-                        )
-                        .height(3),
-                    ]
-                    .width(100)
-                    .spacing(2)
-                    .align_items(Alignment::End);
+                    let board_selector =
+                        pick_list(Board::ALL, Some(self.board), Message::BoardChanged);
 
-                    row![logo, status, horizontal_space(), counter]
+                    row![logo, status, horizontal_space(), board_selector]
                         .spacing(10)
                         .align_items(Alignment::Center)
                 };
@@ -235,7 +229,29 @@ impl Comet {
                 .spacing(10);
 
                 let timeline = {
+                    let counter = tooltip(
+                        progress_bar(
+                            0.0..=self.timeline.capacity() as f32,
+                            self.timeline.len() as f32,
+                        )
+                        .height(10)
+                        .width(20),
+                        container(
+                            text(format!(
+                                "Buffer capacity: {} / {}",
+                                self.timeline.len(),
+                                self.timeline.capacity(),
+                            ))
+                            .font(Font::MONOSPACE)
+                            .size(8),
+                        )
+                        .padding(5)
+                        .style(container::rounded_box),
+                        tooltip::Position::Top,
+                    );
+
                     row![
+                        counter,
                         slider(
                             self.timeline.range(),
                             self.playhead,
@@ -280,52 +296,5 @@ impl Comet {
 
     fn theme(&self) -> Theme {
         self.theme.clone()
-    }
-}
-
-fn performance_board() -> pane_grid::Configuration<Module> {
-    let update_and_view = pane_grid::Configuration::Split {
-        axis: pane_grid::Axis::Vertical,
-        ratio: 0.5,
-        a: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
-            span::Stage::Update,
-        ))),
-        b: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
-            span::Stage::View(window::Id::MAIN),
-        ))),
-    };
-
-    let layout_and_interact = pane_grid::Configuration::Split {
-        axis: pane_grid::Axis::Vertical,
-        ratio: 0.5,
-        a: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
-            span::Stage::Layout(window::Id::MAIN),
-        ))),
-        b: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
-            span::Stage::Interact(window::Id::MAIN),
-        ))),
-    };
-
-    let draw_and_present = pane_grid::Configuration::Split {
-        axis: pane_grid::Axis::Vertical,
-        ratio: 0.5,
-        a: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
-            span::Stage::Draw(window::Id::MAIN),
-        ))),
-        b: Box::new(pane_grid::Configuration::Pane(Module::performance_chart(
-            span::Stage::Present(window::Id::MAIN),
-        ))),
-    };
-
-    pane_grid::Configuration::Split {
-        axis: pane_grid::Axis::Horizontal,
-        ratio: 1.0 / 3.0,
-        a: Box::new(update_and_view),
-        b: Box::new(pane_grid::Configuration::Split {
-            axis: pane_grid::Axis::Horizontal,
-            ratio: 0.5,
-            a: Box::new(layout_and_interact),
-            b: Box::new(draw_and_present),
-        }),
     }
 }
