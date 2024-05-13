@@ -326,9 +326,6 @@ impl<'a, Message> canvas::Program<Message> for MessageRate<'a> {
 
         let geometry = self.cache.draw(renderer, bounds.size(), |frame| {
             let updates_per_second = {
-                let mut current_second = None;
-                let mut current_bucket = 0;
-
                 let mut updates =
                     self.timeline
                         .seek(self.playhead)
@@ -341,10 +338,16 @@ impl<'a, Message> canvas::Program<Message> for MessageRate<'a> {
                             _ => None,
                         });
 
+                let mut current_bucket = 1;
+                let mut current_second = updates.next().map(|time| {
+                    time.duration_since(SystemTime::UNIX_EPOCH)
+                        .ok()
+                        .unwrap_or_default()
+                        .as_secs()
+                });
+
                 std::iter::from_fn(move || {
                     while let Some(time) = updates.next() {
-                        current_bucket += 1;
-
                         let second = time
                             .duration_since(SystemTime::UNIX_EPOCH)
                             .unwrap_or_default()
@@ -354,13 +357,15 @@ impl<'a, Message> canvas::Program<Message> for MessageRate<'a> {
                             let bucket = current_bucket;
 
                             current_second = Some(second);
-                            current_bucket = 0;
+                            current_bucket = 1;
 
                             return Some(bucket);
                         }
+
+                        current_bucket += 1;
                     }
 
-                    None
+                    current_second.take().is_some().then_some(current_bucket)
                 })
             };
 
@@ -372,10 +377,10 @@ impl<'a, Message> canvas::Program<Message> for MessageRate<'a> {
                 theme,
                 updates_per_second,
                 |amount| amount as f64,
-                |amount| format!("{amount} m/s"),
+                |amount| format!("{amount} msg/s"),
                 |amount, n| amount as f64 / n as f64,
                 std::convert::identity,
-                |average| format!("{:.1} m/s", average),
+                |average| format!("{:.1} msg/s", average),
             );
         });
 
