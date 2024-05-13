@@ -136,29 +136,30 @@ impl Module {
             .width(Length::Fill)
             .height(Length::Fill)
             .into(),
-            Module::MessageLog => scrollable::Scrollable::with_direction(
-                column(
-                    timeline
-                        .seek(playhead)
-                        .filter_map(|event| match event {
-                            beacon::Event::SpanFinished {
-                                span: Span::Update { message, .. },
-                                ..
-                            } => Some(message),
-                            _ => None,
-                        })
-                        .map(|message| text(message).size(10).font(Font::MONOSPACE).into())
-                        .take(10),
+            Module::MessageLog => {
+                let messages = timeline
+                    .seek(playhead)
+                    .filter_map(|event| match event {
+                        beacon::Event::SpanFinished {
+                            span: Span::Update { message, .. },
+                            ..
+                        } => Some(message),
+                        _ => None,
+                    })
+                    .map(|message| text(message).size(10).font(Font::MONOSPACE).into())
+                    .take(10)
+                    .collect::<Vec<_>>();
+
+                scrollable::Scrollable::with_direction(
+                    column(messages.into_iter().rev()).spacing(5).padding(5),
+                    scrollable::Direction::Vertical(
+                        scrollable::Properties::default().alignment(scrollable::Alignment::End),
+                    ),
                 )
-                .spacing(5)
-                .padding(5),
-                scrollable::Direction::Vertical(
-                    scrollable::Properties::default().alignment(scrollable::Alignment::End),
-                ),
-            )
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into(),
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .into()
+            }
         }
     }
 }
