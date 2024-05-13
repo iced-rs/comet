@@ -209,10 +209,20 @@ impl Comet {
                         },
                     );
 
+                    let time = if let Some(time) = self.timeline.time_at(self.playhead) {
+                        let datetime: chrono::DateTime<chrono::Local> = time.into();
+
+                        text(datetime.format("%d/%m/%Y %H:%M:%S%.3f").to_string())
+                            .size(10)
+                            .into()
+                    } else {
+                        Element::from(horizontal_space())
+                    };
+
                     let board_selector =
                         pick_list(Board::ALL, Some(self.board), Message::BoardChanged);
 
-                    row![logo, status, horizontal_space(), board_selector]
+                    row![logo, status, time, horizontal_space(), board_selector]
                         .spacing(10)
                         .align_items(Alignment::Center)
                 };
@@ -250,13 +260,15 @@ impl Comet {
                         tooltip::Position::Top,
                     );
 
+                    let timeline = slider(
+                        self.timeline.range(),
+                        self.playhead,
+                        Message::PlayheadChanged,
+                    );
+
                     row![
                         counter,
-                        slider(
-                            self.timeline.range(),
-                            self.playhead,
-                            Message::PlayheadChanged,
-                        ),
+                        timeline,
                         button(text("→").size(14))
                             .on_press_maybe(
                                 (!self.timeline.is_live(self.playhead)).then_some(Message::GoLive)

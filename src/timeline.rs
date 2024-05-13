@@ -73,6 +73,10 @@ impl Timeline {
             _ => None,
         })
     }
+
+    pub fn time_at(&self, index: Index) -> Option<SystemTime> {
+        self.seek(index).next().map(beacon::Event::at)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
