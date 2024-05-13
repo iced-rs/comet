@@ -3,11 +3,13 @@ use iced_beacon::core;
 
 mod module;
 mod timeline;
+mod widget;
 
 pub use module::Module;
 pub use timeline::Timeline;
 
 use crate::beacon::span;
+use crate::widget::animated_text;
 
 use iced::advanced::debug;
 use iced::keyboard;
@@ -129,7 +131,8 @@ impl Comet {
                             self.theme = Theme::custom(name.clone(), palette);
                         }
                     }
-                    beacon::Event::SpanFinished { .. } => {}
+                    beacon::Event::SpanFinished { .. }
+                    | beacon::Event::SubscriptionsTracked { .. } => {}
                     beacon::Event::QuitRequested { .. } | beacon::Event::AlreadyRunning { .. } => {
                         return window::close(window::Id::MAIN);
                     }
@@ -165,7 +168,7 @@ impl Comet {
             State::Waiting => center(
                 row![
                     svg(self.logo.clone()).width(100).height(100),
-                    text("Comet").font(Font::MONOSPACE).size(70),
+                    animated_text("comet").font(Font::MONOSPACE).size(70),
                 ]
                 .spacing(30)
                 .align_items(Alignment::Center),
@@ -175,7 +178,7 @@ impl Comet {
                 let header = {
                     let logo = row![
                         svg(self.logo.clone()).width(24).height(24),
-                        text(name).font(Font::MONOSPACE).size(18),
+                        animated_text(name).font(Font::MONOSPACE).size(18),
                     ]
                     .spacing(10)
                     .align_items(Alignment::Center);
@@ -223,8 +226,9 @@ impl Comet {
                 let modules = pane_grid(&self.modules, |_pane, module, _focused| {
                     let content = module.view(&self.timeline, self.playhead);
 
-                    let title_bar =
-                        pane_grid::TitleBar::new(text(module.title()).font(Font::MONOSPACE));
+                    let title_bar = pane_grid::TitleBar::new(
+                        animated_text(module.title()).font(Font::MONOSPACE),
+                    );
 
                     pane_grid::Content::new(content).title_bar(title_bar)
                 })
@@ -269,8 +273,8 @@ impl Comet {
 
     fn title(&self) -> String {
         match &self.state {
-            State::Waiting => String::from("Comet"),
-            State::Working { name, .. } => format!("{name} - Comet"),
+            State::Waiting => String::from("comet"),
+            State::Working { name, .. } => format!("{name} - comet"),
         }
     }
 

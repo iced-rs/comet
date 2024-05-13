@@ -7,9 +7,10 @@ edition = "2021"
 debug = ["iced/debug"]
 
 [dependencies]
-num-traits = "0.2"
-tracing-subscriber = "0.3"
 log = "0.4"
+num-traits = "0.2"
+rand = "0.8"
+tracing-subscriber = "0.3"
 
 [dependencies.iced]
 version = "0.13.0-dev"
@@ -19,7 +20,7 @@ features = ["tokio", "canvas", "svg", "web-colors", "advanced"]
 version = "0.13.0-dev"
 
 [patch.crates-io]
-iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "b7c65c877df0180b96579a1ba395212de78057bf" }
-iced_beacon = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "b7c65c877df0180b96579a1ba395212de78057bf" }
+iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "b8adfc9ffe7aaab5fef8dd5df688bfb10205cb22" }
+iced_beacon = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "b8adfc9ffe7aaab5fef8dd5df688bfb10205cb22" }
 # iced = { path = "../../iced" }
 # iced_beacon = { path = "../../iced/beacon" }
