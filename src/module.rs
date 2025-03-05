@@ -8,26 +8,19 @@ use iced::time::SystemTime;
 use iced::widget::{canvas, column, scrollable, text};
 use iced::{Element, Font, Length, Pixels, Point, Rectangle, Renderer, Size, Theme};
 
+use std::fmt;
+
 #[derive(Debug)]
 pub enum Module {
-    PerformanceChart {
-        stage: span::Stage,
-        cache: canvas::Cache,
-    },
-    CommandsSpawned {
-        cache: canvas::Cache,
-    },
-    SubscriptionsAlive {
-        cache: canvas::Cache,
-    },
-    MessageRate {
-        cache: canvas::Cache,
-    },
+    PerformanceChart { stage: Stage, cache: canvas::Cache },
+    CommandsSpawned { cache: canvas::Cache },
+    SubscriptionsAlive { cache: canvas::Cache },
+    MessageRate { cache: canvas::Cache },
     MessageLog,
 }
 
 impl Module {
-    pub fn performance_chart(stage: span::Stage) -> Self {
+    pub fn performance_chart(stage: Stage) -> Self {
         Self::PerformanceChart {
             stage,
             cache: canvas::Cache::new(),
@@ -81,7 +74,7 @@ impl Module {
     pub fn invalidate_by(&mut self, event: &beacon::Event) {
         let should_invalidate = match (&self, event) {
             (Self::PerformanceChart { stage, .. }, beacon::Event::SpanFinished { span, .. }) => {
-                &span.stage() == stage
+                &Stage::from(span.stage()) == stage
             }
             (Self::PerformanceChart { .. }, beacon::Event::ThemeChanged { .. }) => true,
             (
@@ -150,17 +143,55 @@ impl Module {
                     .take(10)
                     .collect::<Vec<_>>();
 
-                scrollable::Scrollable::with_direction(
-                    column(messages.into_iter().rev()).spacing(5).padding(5),
-                    scrollable::Direction::Vertical(
-                        scrollable::Properties::default().alignment(scrollable::Alignment::End),
-                    ),
-                )
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .into()
+                scrollable(column(messages.into_iter().rev()).spacing(5).padding(5))
+                    .anchor_bottom()
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .into()
             }
         }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Stage {
+    Boot,
+    Update,
+    View,
+    Layout,
+    Interact,
+    Draw,
+    Present,
+    Custom(String),
+}
+
+impl From<span::Stage> for Stage {
+    fn from(stage: span::Stage) -> Self {
+        match stage {
+            span::Stage::Boot => Stage::Boot,
+            span::Stage::Update => Stage::Update,
+            span::Stage::View(_id) => Stage::View,
+            span::Stage::Layout(_id) => Stage::Layout,
+            span::Stage::Interact(_id) => Stage::Interact,
+            span::Stage::Draw(_id) => Stage::Draw,
+            span::Stage::Present(_id) => Stage::Present,
+            span::Stage::Custom(_id, name) => Stage::Custom(name),
+        }
+    }
+}
+
+impl fmt::Display for Stage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Stage::Boot => "Boot",
+            Stage::Update => "Update",
+            Stage::View => "View",
+            Stage::Layout => "Layout",
+            Stage::Interact => "Interact",
+            Stage::Draw => "Draw",
+            Stage::Present => "Present",
+            Stage::Custom(name) => &name,
+        })
     }
 }
 
@@ -168,7 +199,7 @@ struct PerformanceChart<'a> {
     timeline: &'a Timeline,
     playhead: timeline::Index,
     cache: &'a canvas::Cache,
-    stage: span::Stage,
+    stage: Stage,
 }
 
 impl<'a, Message> canvas::Program<Message> for PerformanceChart<'a> {

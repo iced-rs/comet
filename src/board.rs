@@ -1,8 +1,6 @@
-use crate::beacon::span;
-use crate::Module;
+use crate::module::{self, Module};
 
 use iced::widget::pane_grid;
-use iced::window;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Board {
@@ -32,18 +30,18 @@ impl std::fmt::Display for Board {
 
 fn overview_modules() -> pane_grid::Configuration<Module> {
     let update_and_view = vsplit(
-        Module::performance_chart(span::Stage::Update),
-        Module::performance_chart(span::Stage::View(window::Id::MAIN)),
+        Module::performance_chart(module::Stage::Update),
+        Module::performance_chart(module::Stage::View),
     );
 
     let layout_and_interact = vsplit(
-        Module::performance_chart(span::Stage::Layout(window::Id::MAIN)),
-        Module::performance_chart(span::Stage::Interact(window::Id::MAIN)),
+        Module::performance_chart(module::Stage::Layout),
+        Module::performance_chart(module::Stage::Interact),
     );
 
     let draw_and_present = vsplit(
-        Module::performance_chart(span::Stage::Draw(window::Id::MAIN)),
-        Module::performance_chart(span::Stage::Present(window::Id::MAIN)),
+        Module::performance_chart(module::Stage::Draw),
+        Module::performance_chart(module::Stage::Present),
     );
 
     pane_grid::Configuration::Split {
@@ -60,7 +58,7 @@ fn overview_modules() -> pane_grid::Configuration<Module> {
 }
 
 fn update_modules() -> pane_grid::Configuration<Module> {
-    let update = pane_grid::Configuration::Pane(Module::performance_chart(span::Stage::Update));
+    let update = pane_grid::Configuration::Pane(Module::performance_chart(module::Stage::Update));
 
     let commands_and_subscriptions =
         vsplit(Module::commands_spawned(), Module::subscriptions_alive());

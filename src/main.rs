@@ -9,19 +9,18 @@ mod widget;
 use crate::board::Board;
 use crate::module::Module;
 use crate::timeline::Timeline;
-use crate::widget::animated_text;
+use crate::widget::diffused_text;
 
 use iced::advanced::debug;
+use iced::border;
 use iced::keyboard;
-use iced::program;
-use iced::subscription::{self, Subscription};
 use iced::time::SystemTime;
 use iced::widget::{
     button, center, column, container, horizontal_space, pane_grid, pick_list, progress_bar, row,
     slider, svg, text, tooltip,
 };
 use iced::window;
-use iced::{Alignment, Background, Border, Command, Element, Font, Point, Settings, Size, Theme};
+use iced::{Background, Center, Element, Font, Point, Size, Subscription, Task, Theme};
 
 pub fn main() -> iced::Result {
     tracing_subscriber::fmt::init();
@@ -31,18 +30,15 @@ pub fn main() -> iced::Result {
         std::process::exit(0);
     }
 
-    program(Comet::title, Comet::update, Comet::view)
+    iced::application(Comet::title, Comet::update, Comet::view)
         .subscription(Comet::subscription)
         .theme(Comet::theme)
-        .settings(Settings {
-            window: window::Settings {
-                size: Size::new(800.0, 600.0),
-                position: window::Position::SpecificWith(|window, monitor| {
-                    Point::new(monitor.width - window.width - 5.0, 0.0)
-                }),
-                ..window::Settings::default()
-            },
-            ..Settings::default()
+        .window(window::Settings {
+            size: Size::new(800.0, 600.0),
+            position: window::Position::SpecificWith(|window, monitor| {
+                Point::new(monitor.width - window.width - 5.0, 0.0)
+            }),
+            ..window::Settings::default()
         })
         .run_with(Comet::new)
 }
@@ -84,23 +80,26 @@ enum Message {
 }
 
 impl Comet {
-    fn new() -> Self {
+    fn new() -> (Self, Task<Message>) {
         let logo = svg::Handle::from_memory(include_bytes!("../assets/logo.svg"));
         let board = Board::Overview;
         let modules = pane_grid::State::with_configuration(board.modules());
 
-        Self {
-            state: State::Waiting,
-            theme: Theme::TokyoNight,
-            timeline: Timeline::new(),
-            playhead: timeline::Index::default(),
-            board,
-            modules,
-            logo,
-        }
+        (
+            Self {
+                state: State::Waiting,
+                theme: Theme::TokyoNight,
+                timeline: Timeline::new(),
+                playhead: timeline::Index::default(),
+                board,
+                modules,
+                logo,
+            },
+            Task::none(),
+        )
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::EventReported(event) => {
                 debug::skip_next_timing();
@@ -139,7 +138,7 @@ impl Comet {
                     beacon::Event::SpanFinished { .. }
                     | beacon::Event::SubscriptionsTracked { .. } => {}
                     beacon::Event::QuitRequested { .. } | beacon::Event::AlreadyRunning { .. } => {
-                        return window::close(window::Id::MAIN);
+                        return iced::exit();
                     }
                 }
 
@@ -161,7 +160,7 @@ impl Comet {
                 self.playhead = *self.timeline.range().end();
             }
             Message::Quit => {
-                return window::close(window::Id::MAIN);
+                return iced::exit();
             }
             Message::BoardChanged(board) => {
                 self.board = board;
@@ -169,7 +168,7 @@ impl Comet {
             }
         }
 
-        Command::none()
+        Task::none()
     }
 
     fn view(&self) -> Element<Message> {
@@ -177,20 +176,20 @@ impl Comet {
             State::Waiting => center(
                 row![
                     svg(self.logo.clone()).width(100).height(100),
-                    animated_text("comet").font(Font::MONOSPACE).size(70),
+                    diffused_text("comet").font(Font::MONOSPACE).size(70),
                 ]
                 .spacing(30)
-                .align_items(Alignment::Center),
+                .align_y(Center),
             )
             .into(),
             State::Working { name, connection } => {
                 let header = {
                     let logo = row![
                         svg(self.logo.clone()).width(24).height(24),
-                        animated_text(name).font(Font::MONOSPACE).size(18),
+                        diffused_text(name).font(Font::MONOSPACE).size(18),
                     ]
                     .spacing(10)
-                    .align_items(Alignment::Center);
+                    .align_y(Center);
 
                     let status = container(horizontal_space()).width(8).height(8).style(
                         move |theme: &Theme| {
@@ -203,7 +202,7 @@ impl Comet {
 
                             container::Style {
                                 background: Some(Background::from(color)),
-                                border: Border::rounded(4),
+                                border: border::rounded(4),
                                 ..container::Style::default()
                             }
                         },
@@ -224,14 +223,14 @@ impl Comet {
 
                     row![logo, status, time, horizontal_space(), board_selector]
                         .spacing(10)
-                        .align_items(Alignment::Center)
+                        .align_y(Center)
                 };
 
                 let modules = pane_grid(&self.modules, |_pane, module, _focused| {
                     let content = module.view(&self.timeline, self.playhead);
 
                     let title_bar = pane_grid::TitleBar::new(
-                        animated_text(module.title()).font(Font::MONOSPACE),
+                        diffused_text(module.title()).font(Font::MONOSPACE),
                     );
 
                     pane_grid::Content::new(content).title_bar(title_bar)
@@ -244,8 +243,8 @@ impl Comet {
                             0.0..=self.timeline.capacity() as f32,
                             self.timeline.len() as f32,
                         )
-                        .height(10)
-                        .width(20),
+                        .girth(10)
+                        .length(20),
                         container(
                             text(format!(
                                 "Buffer capacity: {} / {}",
@@ -276,7 +275,7 @@ impl Comet {
                             .padding([2, 5])
                             .style(button::secondary),
                     ]
-                    .align_items(Alignment::Center)
+                    .align_y(Center)
                     .spacing(10)
                 };
 
@@ -289,7 +288,7 @@ impl Comet {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        let beacon = subscription::run(beacon::run).map(Message::EventReported);
+        let beacon = Subscription::run(beacon::run).map(Message::EventReported);
 
         let hotkeys = keyboard::on_key_press(|key, _| match key {
             keyboard::Key::Named(keyboard::key::Named::F12) => Some(Message::Quit),

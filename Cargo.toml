@@ -1,7 +1,7 @@
 [package]
 name = "iced_comet"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [features]
 debug = ["iced/debug"]
@@ -9,19 +9,20 @@ debug = ["iced/debug"]
 [dependencies]
 log = "0.4"
 num-traits = "0.2"
-rand = "0.8"
+rand = "0.9"
 tracing-subscriber = "0.3"
 chrono = "0.4"
 
 [dependencies.iced]
-version = "0.13.0-dev"
+version = "0.14.0-dev"
 features = ["tokio", "canvas", "svg", "web-colors", "advanced"]
 
 [dependencies.iced_beacon]
-version = "0.13.0-dev"
+version = "0.14.0-dev"
 
 [patch.crates-io]
-iced = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "832755fdafa42b844fb3e011b43f578ac010b3b6" }
-iced_beacon = { git = "ssh://git@gitlab.com/hecrj/iced.git", rev = "832755fdafa42b844fb3e011b43f578ac010b3b6" }
-# iced = { path = "../../iced" }
-# iced_beacon = { path = "../../iced/beacon" }
+iced.git = "https://github.com/iced-rs/iced.git"
+iced.rev = "a106f7f837d7e52ff4d406ebbe447bcee2f8dd75"
+
+iced_beacon.git = "https://github.com/iced-rs/iced.git"
+iced_beacon.rev = "a106f7f837d7e52ff4d406ebbe447bcee2f8dd75"

@@ -3,15 +3,14 @@ use iced::advanced::renderer;
 use iced::advanced::widget::tree::{self, Tree};
 use iced::advanced::{self, Clipboard, Shell, Widget};
 use iced::alignment;
-use iced::event::{self, Event};
 use iced::mouse;
 use iced::time::{Duration, Instant};
 use iced::widget::text;
 use iced::window;
-use iced::{Color, Element, Length, Pixels, Rectangle, Size};
+use iced::{Center, Color, Element, Event, Length, Pixels, Rectangle, Size};
 
 #[derive(Debug)]
-pub struct AnimatedText<'a, Theme, Renderer>
+pub struct DiffusedText<'a, Theme, Renderer>
 where
     Theme: text::Catalog,
     Renderer: advanced::text::Renderer,
@@ -21,21 +20,20 @@ where
     line_height: text::LineHeight,
     width: Length,
     height: Length,
-    horizontal_alignment: alignment::Horizontal,
-    vertical_alignment: alignment::Vertical,
+    align_x: alignment::Horizontal,
+    align_y: alignment::Vertical,
     font: Option<Renderer::Font>,
     shaping: text::Shaping,
     class: Theme::Class<'a>,
     duration: Duration,
+    tick_rate: u64,
 }
 
-impl<'a, Theme, Renderer> AnimatedText<'a, Theme, Renderer>
+impl<'a, Theme, Renderer> DiffusedText<'a, Theme, Renderer>
 where
     Theme: text::Catalog,
     Renderer: advanced::text::Renderer,
 {
-    const TICK_RATE_MILLIS: u64 = 25;
-
     pub fn new(fragment: impl text::IntoFragment<'a>) -> Self {
         Self {
             fragment: fragment.into_fragment(),
@@ -44,11 +42,12 @@ where
             font: None,
             width: Length::Shrink,
             height: Length::Shrink,
-            horizontal_alignment: alignment::Horizontal::Left,
-            vertical_alignment: alignment::Vertical::Top,
+            align_x: alignment::Horizontal::Left,
+            align_y: alignment::Vertical::Top,
             shaping: text::Shaping::Basic,
             class: Theme::default(),
-            duration: Duration::from_millis(500),
+            duration: Duration::from_millis(400),
+            tick_rate: 50,
         }
     }
 
@@ -77,20 +76,25 @@ where
         self
     }
 
-    pub fn horizontal_alignment(mut self, alignment: alignment::Horizontal) -> Self {
-        self.horizontal_alignment = alignment;
+    pub fn align_x(mut self, alignment: impl Into<alignment::Horizontal>) -> Self {
+        self.align_x = alignment.into();
         self
     }
 
-    pub fn vertical_alignment(mut self, alignment: alignment::Vertical) -> Self {
-        self.vertical_alignment = alignment;
+    pub fn align_y(mut self, alignment: impl Into<alignment::Vertical>) -> Self {
+        self.align_y = alignment.into();
         self
+    }
+
+    pub fn center(self) -> Self {
+        self.align_x(Center).align_y(Center)
     }
 
     pub fn shaping(mut self, shaping: text::Shaping) -> Self {
         self.shaping = shaping;
         self
     }
+
     #[must_use]
     pub fn style(mut self, style: impl Fn(&Theme) -> text::Style + 'a) -> Self
     where
@@ -99,6 +103,7 @@ where
         self.class = (Box::new(style) as text::StyleFn<'a, Theme>).into();
         self
     }
+
     pub fn color(self, color: impl Into<Color>) -> Self
     where
         Theme::Class<'a>: From<text::StyleFn<'a, Theme>>,
@@ -115,8 +120,19 @@ where
         self.style(move |_theme| text::Style { color })
     }
 
-    pub fn duration(mut self, duration: Duration) -> Self {
-        self.duration = duration;
+    pub fn duration(mut self, duration: impl Into<Duration>) -> Self {
+        self.duration = duration.into();
+        self
+    }
+
+    pub fn tick_rate(mut self, tick_rate: impl Into<Duration>) -> Self {
+        self.tick_rate = tick_rate.into().as_millis() as u64;
+        self
+    }
+
+    pub fn fast(mut self) -> Self {
+        self.duration = self.duration / 2;
+        self.tick_rate = self.tick_rate / 2;
         self
     }
 }
@@ -124,9 +140,9 @@ where
 /// The internal state of a [`Text`] widget.
 #[derive(Debug)]
 pub struct State<P: advanced::text::Paragraph> {
+    content: String,
     internal: text::State<P>,
     animation: Animation,
-    last_fragment: String,
 }
 
 #[derive(Debug)]
@@ -140,7 +156,7 @@ enum Animation {
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for AnimatedText<'a, Theme, Renderer>
+    for DiffusedText<'a, Theme, Renderer>
 where
     Theme: text::Catalog,
     Renderer: advanced::text::Renderer,
@@ -151,13 +167,13 @@ where
 
     fn state(&self) -> tree::State {
         tree::State::new(State {
+            content: String::new(),
             internal: text::State::<Renderer::Paragraph>::default(),
             animation: Animation::Ticking {
                 fragment: String::new(),
                 ticks: 0,
                 next_redraw: Instant::now(),
             },
-            last_fragment: String::new(),
         })
     }
 
@@ -176,18 +192,19 @@ where
     ) -> layout::Node {
         let state = &mut tree.state.downcast_mut::<State<Renderer::Paragraph>>();
 
-        if state.last_fragment != self.fragment {
+        if state.content != self.fragment {
+            state.content = self.fragment.clone().into_owned();
+
             state.animation = Animation::Ticking {
-                fragment: String::new(),
+                fragment: String::from("-"),
                 ticks: 0,
                 next_redraw: Instant::now(),
             };
-            state.last_fragment = self.fragment.clone().into_owned();
         }
 
         let fragment = match &state.animation {
             Animation::Ticking { fragment, .. } => fragment,
-            Animation::Done { .. } => self.fragment.as_ref(),
+            Animation::Done => self.fragment.as_ref(),
         };
 
         text::layout(
@@ -200,9 +217,10 @@ where
             self.line_height,
             self.size,
             self.font,
-            self.horizontal_alignment,
-            self.vertical_alignment,
+            self.align_x,
+            self.align_y,
             self.shaping,
+            text::Wrapping::default(),
         )
     }
 
@@ -219,24 +237,35 @@ where
         let state = tree.state.downcast_ref::<State<Renderer::Paragraph>>();
         let style = theme.style(&self.class);
 
-        text::draw(renderer, defaults, layout, &state.internal, style, viewport);
+        text::draw(
+            renderer,
+            defaults,
+            layout,
+            state.internal.0.raw(),
+            style,
+            viewport,
+        );
     }
 
-    fn on_event(
+    fn update(
         &mut self,
         tree: &mut Tree,
-        event: Event,
-        _layout: Layout<'_>,
+        event: &Event,
+        layout: Layout<'_>,
         _cursor: mouse::Cursor,
         _renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
-        _viewport: &Rectangle,
-    ) -> event::Status {
+        viewport: &Rectangle,
+    ) {
         use rand::Rng;
 
+        if layout.bounds().intersection(viewport).is_none() {
+            return;
+        }
+
         match event {
-            Event::Window(_, window::Event::RedrawRequested(now)) => {
+            Event::Window(window::Event::RedrawRequested(now)) => {
                 let state = tree.state.downcast_mut::<State<Renderer::Paragraph>>();
 
                 match &mut state.animation {
@@ -245,57 +274,57 @@ where
                         next_redraw,
                         ticks,
                     } => {
-                        if *next_redraw <= now {
+                        if *next_redraw <= *now {
                             *ticks += 1;
 
-                            let mut rng = rand::thread_rng();
+                            let mut rng = rand::rng();
                             let progress = (self.fragment.len() as f32
                                 / self.duration.as_millis() as f32
-                                * (*ticks * Self::TICK_RATE_MILLIS) as f32)
+                                * (*ticks * self.tick_rate) as f32)
                                 as usize;
 
                             if progress >= self.fragment.len() {
                                 state.animation = Animation::Done;
                                 shell.invalidate_layout();
 
-                                return event::Status::Ignored;
+                                return;
                             }
 
                             *fragment = self
                                 .fragment
                                 .chars()
                                 .take(progress as usize)
-                                .chain(
-                                    std::iter::from_fn(|| Some(rng.gen_range('!'..'z'))).take(
-                                        self.fragment.len().saturating_sub(progress as usize),
-                                    ),
-                                )
+                                .chain(self.fragment.chars().skip(progress as usize).map(|c| {
+                                    if c.is_whitespace() || c == '-' {
+                                        c
+                                    } else {
+                                        rng.random_range('a'..'z')
+                                    }
+                                }))
                                 .collect::<String>();
 
-                            *next_redraw = now + Duration::from_millis(Self::TICK_RATE_MILLIS);
+                            *next_redraw = *now + Duration::from_millis(self.tick_rate);
 
                             shell.invalidate_layout();
                         }
 
-                        shell.request_redraw(window::RedrawRequest::At(*next_redraw));
+                        shell.request_redraw_at(*next_redraw);
                     }
-                    Animation::Done { .. } => {}
+                    Animation::Done => {}
                 }
             }
             _ => {}
         }
-
-        event::Status::Ignored
     }
 }
 
-impl<'a, Message, Theme, Renderer> From<AnimatedText<'a, Theme, Renderer>>
+impl<'a, Message, Theme, Renderer> From<DiffusedText<'a, Theme, Renderer>>
     for Element<'a, Message, Theme, Renderer>
 where
     Theme: text::Catalog + 'a,
     Renderer: advanced::text::Renderer + 'a,
 {
-    fn from(text: AnimatedText<'a, Theme, Renderer>) -> Element<'a, Message, Theme, Renderer> {
+    fn from(text: DiffusedText<'a, Theme, Renderer>) -> Element<'a, Message, Theme, Renderer> {
         Element::new(text)
     }
 }

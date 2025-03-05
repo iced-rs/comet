@@ -1,6 +1,6 @@
 use crate::beacon;
-use crate::beacon::span;
 use crate::core::time::{Duration, SystemTime};
+use crate::module;
 
 use std::collections::VecDeque;
 use std::ops::RangeInclusive;
@@ -61,10 +61,12 @@ impl Timeline {
     pub fn timeframes<'a>(
         &'a self,
         index: Index,
-        stage: &'a span::Stage,
-    ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + '_ {
+        stage: &'a module::Stage,
+    ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + 'a {
         self.seek(index).filter_map(move |event| match event {
-            beacon::Event::SpanFinished { at, duration, span } if &span.stage() == stage => {
+            beacon::Event::SpanFinished { at, duration, span }
+                if &module::Stage::from(span.stage()) == stage =>
+            {
                 Some(Timeframe {
                     at: *at,
                     duration: *duration,
@@ -96,11 +98,7 @@ impl From<Index> for f64 {
 
 impl num_traits::FromPrimitive for Index {
     fn from_i64(n: i64) -> Option<Self> {
-        if n < 0 {
-            None
-        } else {
-            Some(Self(n as usize))
-        }
+        if n < 0 { None } else { Some(Self(n as usize)) }
     }
 
     fn from_u64(n: u64) -> Option<Self> {
