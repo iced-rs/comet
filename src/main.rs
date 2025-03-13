@@ -30,7 +30,8 @@ pub fn main() -> iced::Result {
         std::process::exit(0);
     }
 
-    iced::application(Comet::title, Comet::update, Comet::view)
+    iced::application(Comet::new, Comet::update, Comet::view)
+        .title(Comet::title)
         .subscription(Comet::subscription)
         .theme(Comet::theme)
         .window(window::Settings {
@@ -40,7 +41,7 @@ pub fn main() -> iced::Result {
             }),
             ..window::Settings::default()
         })
-        .run_with(Comet::new)
+        .run()
 }
 
 #[derive(Debug)]

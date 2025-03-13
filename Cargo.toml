@@ -22,7 +22,7 @@ version = "0.14.0-dev"
 
 [patch.crates-io]
 iced.git = "https://github.com/iced-rs/iced.git"
-iced.rev = "a106f7f837d7e52ff4d406ebbe447bcee2f8dd75"
+iced.rev = "121102e55beaa52c78a43eb5e60b07769c2b5b04"
 
 iced_beacon.git = "https://github.com/iced-rs/iced.git"
-iced_beacon.rev = "a106f7f837d7e52ff4d406ebbe447bcee2f8dd75"
+iced_beacon.rev = "121102e55beaa52c78a43eb5e60b07769c2b5b04"

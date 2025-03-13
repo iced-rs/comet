@@ -20,7 +20,7 @@ where
     line_height: text::LineHeight,
     width: Length,
     height: Length,
-    align_x: alignment::Horizontal,
+    align_x: text::Alignment,
     align_y: alignment::Vertical,
     font: Option<Renderer::Font>,
     shaping: text::Shaping,
@@ -42,7 +42,7 @@ where
             font: None,
             width: Length::Shrink,
             height: Length::Shrink,
-            align_x: alignment::Horizontal::Left,
+            align_x: text::Alignment::Default,
             align_y: alignment::Vertical::Top,
             shaping: text::Shaping::Basic,
             class: Theme::default(),
@@ -76,7 +76,7 @@ where
         self
     }
 
-    pub fn align_x(mut self, alignment: impl Into<alignment::Horizontal>) -> Self {
+    pub fn align_x(mut self, alignment: impl Into<text::Alignment>) -> Self {
         self.align_x = alignment.into();
         self
     }

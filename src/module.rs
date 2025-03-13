@@ -2,7 +2,6 @@ use crate::beacon;
 use crate::beacon::span::{self, Span};
 use crate::timeline::{self, Timeline};
 
-use iced::alignment;
 use iced::mouse;
 use iced::time::SystemTime;
 use iced::widget::{canvas, column, scrollable, text};
@@ -494,8 +493,6 @@ fn draw_bar_chart<T, A>(
         position: Point::new(4.0, 4.0),
         color: palette.background.base.text,
         size: Pixels(14.0),
-        horizontal_alignment: alignment::Horizontal::Left,
-        vertical_alignment: alignment::Vertical::Top,
         font: Font::MONOSPACE,
         ..canvas::Text::default()
     });
@@ -505,8 +502,6 @@ fn draw_bar_chart<T, A>(
         position: Point::new(4.0, 22.0),
         color: palette.background.base.text,
         size: Pixels(14.0),
-        horizontal_alignment: alignment::Horizontal::Left,
-        vertical_alignment: alignment::Vertical::Top,
         font: Font::MONOSPACE,
         ..canvas::Text::default()
     });
