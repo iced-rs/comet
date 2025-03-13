@@ -490,7 +490,7 @@ fn draw_bar_chart<T, A>(
 
     frame.fill_text(canvas::Text {
         content: format!("Average: {}", average_to_string(average)),
-        position: Point::new(4.0, 4.0),
+        position: Point::new(10.0, 0.0),
         color: palette.background.base.text,
         size: Pixels(14.0),
         font: Font::MONOSPACE,
@@ -499,7 +499,7 @@ fn draw_bar_chart<T, A>(
 
     frame.fill_text(canvas::Text {
         content: format!("Maximum: {}", to_string(max)),
-        position: Point::new(4.0, 22.0),
+        position: Point::new(10.0, 18.0),
         color: palette.background.base.text,
         size: Pixels(14.0),
         font: Font::MONOSPACE,

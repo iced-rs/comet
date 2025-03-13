@@ -16,11 +16,11 @@ use iced::border;
 use iced::keyboard;
 use iced::time::SystemTime;
 use iced::widget::{
-    button, center, column, container, horizontal_space, pane_grid, pick_list, progress_bar, row,
-    slider, svg, text, tooltip,
+    bottom, button, center, column, container, horizontal_rule, horizontal_space, pane_grid,
+    progress_bar, row, rule, slider, stack, svg, text, tooltip,
 };
 use iced::window;
-use iced::{Background, Center, Element, Font, Point, Size, Subscription, Task, Theme};
+use iced::{Background, Center, Element, Font, Point, Shrink, Size, Subscription, Task, Theme};
 
 pub fn main() -> iced::Result {
     tracing_subscriber::fmt::init();
@@ -89,7 +89,7 @@ impl Comet {
         (
             Self {
                 state: State::Waiting,
-                theme: Theme::TokyoNight,
+                theme: Theme::CatppuccinMocha,
                 timeline: Timeline::new(),
                 playhead: timeline::Index::default(),
                 board,
@@ -213,28 +213,57 @@ impl Comet {
                         let datetime: chrono::DateTime<chrono::Local> = time.into();
 
                         text(datetime.format("%d/%m/%Y %H:%M:%S%.3f").to_string())
+                            .font(Font::MONOSPACE)
                             .size(10)
                             .into()
                     } else {
                         Element::from(horizontal_space())
                     };
 
-                    let board_selector =
-                        pick_list(Board::ALL, Some(self.board), Message::BoardChanged);
+                    let tabs = {
+                        let tab = move |tab: Board| {
+                            let label = text(tab.to_string()).font(Font::MONOSPACE);
 
-                    row![logo, status, time, horizontal_space(), board_selector]
+                            if tab == self.board {
+                                stack![
+                                    container(label).padding([5, 10]),
+                                    bottom(horizontal_rule(2).style(|theme: &Theme| rule::Style {
+                                        color: theme.palette().text,
+                                        width: 2,
+                                        radius: border::Radius::default(),
+                                        fill_mode: rule::FillMode::Full,
+                                    }))
+                                ]
+                                .into()
+                            } else {
+                                button(label)
+                                    .on_press(Message::BoardChanged(tab))
+                                    .style(button::text)
+                                    .into()
+                            }
+                        };
+
+                        row(Board::ALL.iter().cloned().map(tab))
+                            .spacing(10)
+                            .align_y(Center)
+                    };
+
+                    row![logo, status, time, horizontal_space(), tabs]
                         .spacing(10)
                         .align_y(Center)
+                        .height(Shrink)
                 };
 
                 let modules = pane_grid(&self.modules, |_pane, module, _focused| {
-                    let content = module.view(&self.timeline, self.playhead);
+                    let content = container(module.view(&self.timeline, self.playhead));
 
                     let title_bar = pane_grid::TitleBar::new(
-                        diffused_text(module.title()).font(Font::MONOSPACE),
+                        container(diffused_text(module.title()).font(Font::MONOSPACE)).padding(10),
                     );
 
-                    pane_grid::Content::new(content).title_bar(title_bar)
+                    pane_grid::Content::new(content)
+                        .title_bar(title_bar)
+                        .style(container::bordered_box)
                 })
                 .spacing(10);
 
