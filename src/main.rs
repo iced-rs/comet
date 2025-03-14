@@ -8,7 +8,7 @@ mod widget;
 
 use crate::screen::Screen;
 use crate::timeline::Timeline;
-use crate::widget::diffused_text;
+use crate::widget::{circle, diffused_text};
 
 use iced::advanced::debug;
 use iced::border;
@@ -19,7 +19,7 @@ use iced::widget::{
     row, rule, slider, stack, svg, text, tooltip,
 };
 use iced::window;
-use iced::{Background, Center, Element, Font, Point, Shrink, Size, Subscription, Task, Theme};
+use iced::{Center, Element, Font, Point, Shrink, Size, Subscription, Task, Theme};
 
 pub fn main() -> iced::Result {
     tracing_subscriber::fmt::init();
@@ -207,22 +207,10 @@ impl Comet {
                     .spacing(10)
                     .align_y(Center);
 
-                    let status = container(horizontal_space()).width(8).height(8).style(
-                        move |theme: &Theme| {
-                            let palette = theme.palette();
-
-                            let color = match connection {
-                                Connection::Connected { .. } => palette.success,
-                                Connection::Disconnected { .. } => palette.danger,
-                            };
-
-                            container::Style {
-                                background: Some(Background::from(color)),
-                                border: border::rounded(4),
-                                ..container::Style::default()
-                            }
-                        },
-                    );
+                    let status = circle(move |palette| match connection {
+                        Connection::Connected { .. } => palette.success.base.color,
+                        Connection::Disconnected { .. } => palette.danger.base.color,
+                    });
 
                     let time = if let Some(time) = self.timeline.time_at(self.playhead) {
                         let datetime: chrono::DateTime<chrono::Local> = time.into();
@@ -314,18 +302,33 @@ impl Comet {
                         Message::PlayheadChanged,
                     );
 
-                    row![
-                        counter,
-                        timeline,
-                        button(text("→").size(14))
-                            .on_press_maybe(
-                                (!self.timeline.is_live(self.playhead)).then_some(Message::GoLive)
-                            )
-                            .padding([2, 5])
-                            .style(button::secondary),
-                    ]
-                    .align_y(Center)
-                    .spacing(10)
+                    let live: Element<_> = {
+                        let is_live = self.timeline.is_live(self.playhead);
+
+                        let indicator = circle(move |palette| {
+                            if is_live {
+                                palette.danger.strong.color
+                            } else {
+                                palette.background.weak.color
+                            }
+                        });
+
+                        let live = row![indicator, text("LIVE").size(12).font(Font::MONOSPACE)]
+                            .spacing(5)
+                            .align_y(Center);
+
+                        if is_live {
+                            live.into()
+                        } else {
+                            button(live)
+                                .padding(0)
+                                .on_press(Message::GoLive)
+                                .style(button::text)
+                                .into()
+                        }
+                    };
+
+                    row![counter, timeline, live].align_y(Center).spacing(10)
                 };
 
                 column![header, screen, timeline]

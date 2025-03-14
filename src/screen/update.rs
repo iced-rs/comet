@@ -3,7 +3,8 @@ use crate::chart;
 use crate::timeline::{self, Timeline};
 use crate::widget::card;
 
-use iced::widget::{column, row, scrollable, text};
+use iced::padding;
+use iced::widget::{column, container, row, scrollable, text};
 use iced::{Element, Fill, Font};
 
 #[derive(Debug, Default)]
@@ -54,25 +55,28 @@ impl Update {
             chart::subscriptions_alive(timeline, playhead, &self.subscriptions_alive);
         let message_rate = chart::message_rate(timeline, playhead, &self.message_rate);
 
-        let message_log = scrollable(
-            column(
-                timeline
-                    .seek(playhead)
-                    .filter_map(|event| match event {
-                        Event::SpanFinished {
-                            span: Span::Update { message, .. },
-                            ..
-                        } => Some(message),
-                        _ => None,
-                    })
-                    .take(20)
-                    .map(|message| text(message).font(Font::MONOSPACE).size(10).into()),
+        let message_log = container(
+            scrollable(
+                column(
+                    timeline
+                        .seek(playhead)
+                        .filter_map(|event| match event {
+                            Event::SpanFinished {
+                                span: Span::Update { message, .. },
+                                ..
+                            } => Some(message),
+                            _ => None,
+                        })
+                        .take(20)
+                        .map(|message| text(message).font(Font::MONOSPACE).size(10).into()),
+                )
+                .spacing(5),
             )
-            .spacing(5),
+            .width(Fill)
+            .height(Fill)
+            .anchor_bottom(),
         )
-        .width(Fill)
-        .height(Fill)
-        .anchor_bottom();
+        .padding(padding::all(10).top(0));
 
         column![
             card("Update", update),
