@@ -60,8 +60,8 @@ impl Update {
 
         let message_log = container(
             scrollable(
-                column(
-                    timeline
+                column({
+                    let messages: Vec<_> = timeline
                         .seek(playhead)
                         .filter_map(|event| match event {
                             Event::SpanFinished {
@@ -71,8 +71,11 @@ impl Update {
                             _ => None,
                         })
                         .take(20)
-                        .map(|message| text(message).font(Font::MONOSPACE).size(10).into()),
-                )
+                        .map(|message| text(message).font(Font::MONOSPACE).size(10).into())
+                        .collect();
+
+                    messages.into_iter().rev()
+                })
                 .spacing(5),
             )
             .width(Fill)
