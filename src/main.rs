@@ -166,6 +166,15 @@ impl Comet {
                 Task::none()
             }
             Message::GoLive => {
+                match &mut self.screen {
+                    Screen::Overview(overview) => {
+                        overview.invalidate();
+                    }
+                    Screen::Update(update) => {
+                        update.invalidate();
+                    }
+                }
+
                 self.playhead = *self.timeline.range().end();
 
                 Task::none()
