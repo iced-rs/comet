@@ -1,6 +1,6 @@
 use crate::beacon;
+use crate::chart;
 use crate::core::time::{Duration, SystemTime};
-use crate::module;
 
 use std::collections::VecDeque;
 use std::ops::RangeInclusive;
@@ -61,11 +61,11 @@ impl Timeline {
     pub fn timeframes<'a>(
         &'a self,
         index: Index,
-        stage: &'a module::Stage,
+        stage: &'a chart::Stage,
     ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + 'a {
         self.seek(index).filter_map(move |event| match event {
             beacon::Event::SpanFinished { at, duration, span }
-                if &module::Stage::from(span.stage()) == stage =>
+                if &chart::Stage::from(span.stage()) == stage =>
             {
                 Some(Timeframe {
                     at: *at,

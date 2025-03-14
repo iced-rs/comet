@@ -1,13 +1,12 @@
 use iced_beacon as beacon;
 use iced_beacon::core;
 
-mod board;
-mod module;
+mod chart;
+mod screen;
 mod timeline;
 mod widget;
 
-use crate::board::Board;
-use crate::module::Module;
+use crate::screen::Screen;
 use crate::timeline::Timeline;
 use crate::widget::diffused_text;
 
@@ -16,8 +15,8 @@ use iced::border;
 use iced::keyboard;
 use iced::time::SystemTime;
 use iced::widget::{
-    bottom, button, center, column, container, horizontal_rule, horizontal_space, pane_grid,
-    progress_bar, row, rule, slider, stack, svg, text, tooltip,
+    bottom, button, center, column, container, horizontal_rule, horizontal_space, progress_bar,
+    row, rule, slider, stack, svg, text, tooltip,
 };
 use iced::window;
 use iced::{Background, Center, Element, Font, Point, Shrink, Size, Subscription, Task, Theme};
@@ -46,13 +45,12 @@ pub fn main() -> iced::Result {
 
 #[derive(Debug)]
 struct Comet {
+    logo: svg::Handle,
     state: State,
     theme: Theme,
     timeline: Timeline,
     playhead: timeline::Index,
-    board: Board,
-    modules: pane_grid::State<Module>,
-    logo: svg::Handle,
+    screen: Screen,
 }
 
 #[derive(Debug)]
@@ -77,24 +75,20 @@ enum Message {
     PlayheadChanged(timeline::Index),
     GoLive,
     Quit,
-    BoardChanged(Board),
+    ShowOverview,
+    ShowUpdate,
 }
 
 impl Comet {
     fn new() -> (Self, Task<Message>) {
-        let logo = svg::Handle::from_memory(include_bytes!("../assets/logo.svg"));
-        let board = Board::Overview;
-        let modules = pane_grid::State::with_configuration(board.modules());
-
         (
             Self {
+                logo: svg::Handle::from_memory(include_bytes!("../assets/logo.svg")),
                 state: State::Waiting,
                 theme: Theme::CatppuccinMocha,
                 timeline: Timeline::new(),
                 playhead: timeline::Index::default(),
-                board,
-                modules,
-                logo,
+                screen: Screen::Overview(screen::Overview::new()),
             },
             Task::none(),
         )
@@ -105,8 +99,13 @@ impl Comet {
             Message::EventReported(event) => {
                 debug::skip_next_timing();
 
-                for (_, module) in self.modules.iter_mut() {
-                    module.invalidate_by(&event);
+                match &mut self.screen {
+                    Screen::Overview(overview) => {
+                        overview.invalidate_by(&event);
+                    }
+                    Screen::Update(update) => {
+                        update.invalidate_by(&event);
+                    }
                 }
 
                 match event.clone() {
@@ -149,27 +148,40 @@ impl Comet {
                 if is_live {
                     self.playhead = latest;
                 }
+
+                Task::none()
             }
             Message::PlayheadChanged(playhead) => {
-                for (_, module) in self.modules.iter_mut() {
-                    module.invalidate();
+                match &mut self.screen {
+                    Screen::Overview(overview) => {
+                        overview.invalidate();
+                    }
+                    Screen::Update(update) => {
+                        update.invalidate();
+                    }
                 }
 
                 self.playhead = playhead;
+
+                Task::none()
             }
             Message::GoLive => {
                 self.playhead = *self.timeline.range().end();
+
+                Task::none()
             }
-            Message::Quit => {
-                return iced::exit();
+            Message::Quit => iced::exit(),
+            Message::ShowOverview => {
+                self.screen = Screen::Overview(screen::Overview::new());
+
+                Task::none()
             }
-            Message::BoardChanged(board) => {
-                self.board = board;
-                self.modules = pane_grid::State::with_configuration(board.modules());
+            Message::ShowUpdate => {
+                self.screen = Screen::Update(screen::Update::new());
+
+                Task::none()
             }
         }
-
-        Task::none()
     }
 
     fn view(&self) -> Element<Message> {
@@ -177,7 +189,10 @@ impl Comet {
             State::Waiting => center(
                 row![
                     svg(self.logo.clone()).width(100).height(100),
-                    diffused_text("comet").font(Font::MONOSPACE).size(70),
+                    diffused_text("comet")
+                        .font(Font::MONOSPACE)
+                        .size(70)
+                        .height(105)
                 ]
                 .spacing(30)
                 .align_y(Center),
@@ -221,10 +236,14 @@ impl Comet {
                     };
 
                     let tabs = {
-                        let tab = move |tab: Board| {
-                            let label = text(tab.to_string()).font(Font::MONOSPACE);
+                        fn tab<'a>(
+                            label: &'static str,
+                            on_press: Message,
+                            is_active: bool,
+                        ) -> Element<'a, Message> {
+                            let label = text(label).font(Font::MONOSPACE);
 
-                            if tab == self.board {
+                            if is_active {
                                 stack![
                                     container(label).padding([5, 10]),
                                     bottom(horizontal_rule(2).style(|theme: &Theme| rule::Style {
@@ -236,16 +255,24 @@ impl Comet {
                                 ]
                                 .into()
                             } else {
-                                button(label)
-                                    .on_press(Message::BoardChanged(tab))
-                                    .style(button::text)
-                                    .into()
+                                button(label).on_press(on_press).style(button::text).into()
                             }
-                        };
+                        }
 
-                        row(Board::ALL.iter().cloned().map(tab))
-                            .spacing(10)
-                            .align_y(Center)
+                        row![
+                            tab(
+                                "Overview",
+                                Message::ShowOverview,
+                                matches!(self.screen, Screen::Overview(_))
+                            ),
+                            tab(
+                                "Update",
+                                Message::ShowUpdate,
+                                matches!(self.screen, Screen::Update(_))
+                            ),
+                        ]
+                        .spacing(10)
+                        .align_y(Center)
                     };
 
                     row![logo, status, time, horizontal_space(), tabs]
@@ -254,18 +281,10 @@ impl Comet {
                         .height(Shrink)
                 };
 
-                let modules = pane_grid(&self.modules, |_pane, module, _focused| {
-                    let content = container(module.view(&self.timeline, self.playhead));
-
-                    let title_bar = pane_grid::TitleBar::new(
-                        container(diffused_text(module.title()).font(Font::MONOSPACE)).padding(10),
-                    );
-
-                    pane_grid::Content::new(content)
-                        .title_bar(title_bar)
-                        .style(container::bordered_box)
-                })
-                .spacing(10);
+                let screen = match &self.screen {
+                    Screen::Overview(overview) => overview.view(&self.timeline, self.playhead),
+                    Screen::Update(update) => update.view(&self.timeline, self.playhead),
+                };
 
                 let timeline = {
                     let counter = tooltip(
@@ -309,7 +328,7 @@ impl Comet {
                     .spacing(10)
                 };
 
-                column![header, modules, timeline]
+                column![header, screen, timeline]
                     .spacing(10)
                     .padding(10)
                     .into()
