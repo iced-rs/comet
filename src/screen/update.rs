@@ -40,6 +40,9 @@ impl Update {
                 self.tasks_spawned.clear();
                 self.message_rate.clear();
             }
+            Event::ThemeChanged { .. } => {
+                self.invalidate();
+            }
             _ => {}
         }
     }
