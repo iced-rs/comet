@@ -6,8 +6,8 @@ use iced::mouse;
 use iced::time::SystemTime;
 use iced::widget::canvas;
 use iced::{
-    Bottom, Center, Color, Element, Event, Fill, Font, Pixels, Point, Rectangle, Renderer, Size,
-    Theme, Top, Vector,
+    Bottom, Center, Color, Element, Event, Fill, Font, Pixels, Point, Rectangle, Renderer, Right,
+    Size, Theme, Top,
 };
 
 use std::fmt;
@@ -276,8 +276,9 @@ where
 
             let average_value = (self.average_to_float)(average);
             let average_pixels = f64::from(bounds.height) / (2.0 * average_value);
-            let max_pixels = f64::from(bounds.height) / (self.to_float)(max);
-            let mut max_drawn = false;
+
+            let max_value = (self.to_float)(max);
+            let max_pixels = f64::from(bounds.height) / max_value;
 
             let pixels_per_unit = average_pixels.min(max_pixels);
 
@@ -298,28 +299,11 @@ where
                     if value < average_value as f64 / 2.0 {
                         palette.success.strong.color
                     } else if value > average_value as f64 * 3.0 {
-                        palette.danger.strong.color
+                        palette.danger.weak.color
                     } else {
                         palette.background.strong.color
                     },
                 );
-
-                if !max_drawn && datapoint == max {
-                    let fits = bar.y >= 10.0;
-
-                    frame.fill_text(canvas::Text {
-                        content: (self.to_string)(max),
-                        position: bar.position() + Vector::new(bar.width / 2.0, 0.0),
-                        color: palette.background.base.text,
-                        size: Pixels(10.0),
-                        font: Font::MONOSPACE,
-                        align_x: Center.into(),
-                        align_y: if fits { Bottom } else { Top },
-                        ..canvas::Text::default()
-                    });
-
-                    max_drawn = true;
-                }
 
                 match cursor {
                     Some(cursor) if bar.contains(cursor) => {
@@ -346,21 +330,38 @@ where
                 }
             }
 
-            let average_y = average_value * pixels_per_unit;
+            let average_y = bounds.height - (average_value * pixels_per_unit) as f32;
+            let max_y = bounds.height - (max_value * pixels_per_unit) as f32;
 
             frame.fill_rectangle(
-                Point::new(0.0, average_y as f32),
+                Point::new(0.0, average_y),
                 Size::new(frame.width(), 1.0),
                 palette.background.base.text.scale_alpha(0.5),
             );
 
             frame.fill_text(canvas::Text {
                 content: format!("~{}", (self.average_to_string)(average)),
-                position: Point::new(5.0, average_y as f32 - 2.0),
+                position: Point::new(5.0, average_y - 2.0),
                 color: palette.background.base.text,
                 size: Pixels(14.0),
                 font: Font::MONOSPACE,
                 align_y: Bottom,
+                ..canvas::Text::default()
+            });
+
+            frame.fill_rectangle(
+                Point::new(0.0, max_y),
+                Size::new(frame.width(), 1.0),
+                palette.background.base.text.scale_alpha(0.5),
+            );
+
+            frame.fill_text(canvas::Text {
+                content: (self.to_string)(max),
+                position: Point::new(frame.width() - 5.0, max_y + 2.0),
+                color: palette.background.base.text,
+                size: Pixels(10.0),
+                font: Font::MONOSPACE,
+                align_x: Right,
                 ..canvas::Text::default()
             });
         });
