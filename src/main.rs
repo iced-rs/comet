@@ -154,6 +154,8 @@ impl Comet {
                     timeline::Playhead::Live
                 };
 
+                self.screen.invalidate();
+
                 Task::none()
             }
             Message::Previous => {
