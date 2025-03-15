@@ -172,7 +172,7 @@ impl Comet {
                 self.playhead = match self.playhead {
                     timeline::Playhead::Live => timeline::Playhead::Live,
                     timeline::Playhead::Paused(index) => {
-                        if index + 1 == self.timeline.end() {
+                        if index + 1 >= self.timeline.end() {
                             timeline::Playhead::Live
                         } else {
                             timeline::Playhead::Paused(index + 1)
