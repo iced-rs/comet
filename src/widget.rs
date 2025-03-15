@@ -24,7 +24,7 @@ pub fn card<'a, Message: 'a>(
     content: impl Into<Element<'a, Message>>,
 ) -> Element<'a, Message> {
     container(column![
-        container(text(title).font(Font::MONOSPACE)).padding(padding::all(10).bottom(5)),
+        container(diffused_text(title).font(Font::MONOSPACE)).padding(padding::all(10).bottom(5)),
         content.into()
     ])
     .style(|theme| {
