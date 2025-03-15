@@ -3,7 +3,7 @@ use crate::chart;
 use crate::core::time::{Duration, SystemTime};
 
 use std::collections::VecDeque;
-use std::ops::RangeInclusive;
+use std::ops::{Add, RangeInclusive, Sub};
 
 #[derive(Debug, Clone, Default)]
 pub struct Timeline {
@@ -27,21 +27,26 @@ impl Timeline {
     }
 
     pub fn range(&self) -> RangeInclusive<Index> {
-        Index(0)..=Index(self.events.len())
+        Index(0)..=self.end()
     }
 
-    pub fn is_live(&self, index: Index) -> bool {
-        self.events.len() == index.0
+    pub fn end(&self) -> Index {
+        Index(self.events.len())
     }
 
-    pub fn push(&mut self, event: beacon::Event) -> Index {
+    pub fn index(&self, playhead: Playhead) -> Index {
+        match playhead {
+            Playhead::Live => Index(self.events.len()),
+            Playhead::Paused(index) => index,
+        }
+    }
+
+    pub fn push(&mut self, event: beacon::Event) {
         self.events.push_back(event);
 
         if self.events.len() > Self::MAX_SIZE {
             self.events.pop_front();
         }
-
-        Index(self.len())
     }
 
     pub fn clear(&mut self) {
@@ -50,8 +55,10 @@ impl Timeline {
 
     pub fn seek(
         &self,
-        index: Index,
+        playhead: Playhead,
     ) -> impl DoubleEndedIterator<Item = &beacon::Event> + Clone + '_ {
+        let index = self.index(playhead);
+
         self.events
             .iter()
             .rev()
@@ -60,10 +67,10 @@ impl Timeline {
 
     pub fn timeframes<'a>(
         &'a self,
-        index: Index,
+        playhead: Playhead,
         stage: &'a chart::Stage,
     ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + 'a {
-        self.seek(index).filter_map(move |event| match event {
+        self.seek(playhead).filter_map(move |event| match event {
             beacon::Event::SpanFinished { at, duration, span }
                 if &chart::Stage::from(span.stage()) == stage =>
             {
@@ -76,12 +83,24 @@ impl Timeline {
         })
     }
 
-    pub fn time_at(&self, index: Index) -> Option<SystemTime> {
-        self.seek(index).next().map(beacon::Event::at)
+    pub fn time_at(&self, playhead: Playhead) -> Option<SystemTime> {
+        self.seek(playhead).next().map(beacon::Event::at)
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Playhead {
+    Live,
+    Paused(Index),
+}
+
+impl Playhead {
+    pub fn is_live(self) -> bool {
+        matches!(self, Self::Live)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Index(usize);
 
 impl From<u8> for Index {
@@ -103,6 +122,22 @@ impl num_traits::FromPrimitive for Index {
 
     fn from_u64(n: u64) -> Option<Self> {
         Some(Self(n as usize))
+    }
+}
+
+impl Add<u32> for Index {
+    type Output = Self;
+
+    fn add(self, rhs: u32) -> Self::Output {
+        Self(self.0 + rhs as usize)
+    }
+}
+
+impl Sub<u32> for Index {
+    type Output = Self;
+
+    fn sub(self, rhs: u32) -> Self::Output {
+        Self(self.0.saturating_sub(rhs as usize))
     }
 }
 

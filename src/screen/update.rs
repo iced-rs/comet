@@ -50,7 +50,7 @@ impl Update {
     pub fn view<'a, Message: 'a>(
         &'a self,
         timeline: &'a Timeline,
-        playhead: timeline::Index,
+        playhead: timeline::Playhead,
     ) -> Element<'a, Message> {
         let update = chart::performance(timeline, playhead, &self.update, &chart::Stage::Update);
         let tasks_spawned = chart::tasks_spawned(timeline, playhead, &self.tasks_spawned);

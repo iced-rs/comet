@@ -1,5 +1,6 @@
 use iced::advanced;
 use iced::border;
+use iced::padding;
 use iced::theme::palette;
 use iced::widget::{column, container, horizontal_space, text};
 use iced::{Background, Color, Element, Font, Theme};
@@ -23,7 +24,7 @@ pub fn card<'a, Message: 'a>(
     content: impl Into<Element<'a, Message>>,
 ) -> Element<'a, Message> {
     container(column![
-        container(text(title).font(Font::MONOSPACE)).padding(10),
+        container(text(title).font(Font::MONOSPACE)).padding(padding::all(10).bottom(5)),
         content.into()
     ])
     .style(|theme| {

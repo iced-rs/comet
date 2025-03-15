@@ -64,7 +64,7 @@ impl Overview {
     pub fn view<'a, Message: 'a>(
         &'a self,
         timeline: &'a Timeline,
-        playhead: timeline::Index,
+        playhead: timeline::Playhead,
     ) -> Element<'a, Message> {
         let update = (&chart::Stage::Update, &self.update);
         let view = (&chart::Stage::View, &self.view);

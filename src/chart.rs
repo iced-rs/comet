@@ -5,7 +5,10 @@ use crate::timeline::{self, Timeline};
 use iced::mouse;
 use iced::time::SystemTime;
 use iced::widget::canvas;
-use iced::{Element, Fill, Font, Pixels, Point, Rectangle, Renderer, Size, Theme};
+use iced::{
+    Bottom, Center, Color, Element, Event, Fill, Font, Pixels, Point, Rectangle, Renderer, Theme,
+    Top, Vector,
+};
 
 use std::fmt;
 
@@ -55,7 +58,7 @@ impl fmt::Display for Stage {
 
 pub fn performance<'a, Message>(
     timeline: &'a Timeline,
-    playhead: timeline::Index,
+    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
     stage: &'a Stage,
 ) -> Element<'a, Message>
@@ -80,7 +83,7 @@ where
 
 pub fn tasks_spawned<'a, Message>(
     timeline: &'a Timeline,
-    playhead: timeline::Index,
+    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
 ) -> Element<'a, Message>
 where
@@ -110,7 +113,7 @@ where
 
 pub fn subscriptions_alive<'a, Message>(
     timeline: &'a Timeline,
-    playhead: timeline::Index,
+    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
 ) -> Element<'a, Message>
 where
@@ -135,7 +138,7 @@ where
 
 pub fn message_rate<'a, Message>(
     timeline: &'a Timeline,
-    playhead: timeline::Index,
+    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
 ) -> Element<'a, Message>
 where
@@ -215,18 +218,37 @@ where
 {
     type State = ();
 
+    fn update(
+        &self,
+        _state: &mut Self::State,
+        event: &Event,
+        bounds: Rectangle,
+        cursor: mouse::Cursor,
+    ) -> Option<canvas::Action<Message>> {
+        match event {
+            Event::Mouse(mouse::Event::CursorMoved { .. }) if cursor.is_over(bounds) => {
+                self.cache.clear();
+
+                Some(canvas::Action::request_redraw())
+            }
+            _ => None,
+        }
+    }
+
     fn draw(
         &self,
         _state: &Self::State,
         renderer: &Renderer,
         theme: &Theme,
         bounds: Rectangle,
-        _cursor: mouse::Cursor,
+        cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
         // TODO: Zoom
         const BAR_WIDTH: f32 = 10.0;
 
         let geometry = self.cache.draw(renderer, bounds.size(), |frame| {
+            let cursor = cursor.position_in(bounds);
+
             let bounds = frame.size();
             let palette = theme.extended_palette();
 
@@ -255,6 +277,7 @@ where
             let average_value = (self.average_to_float)(average);
             let average_pixels = f64::from(bounds.height) / (2.0 * average_value);
             let max_pixels = f64::from(bounds.height) / (self.to_float)(max);
+            let mut max_drawn = false;
 
             let pixels_per_unit = average_pixels.min(max_pixels);
 
@@ -262,34 +285,70 @@ where
                 let value = (self.to_float)(datapoint);
                 let bar_height = (value * pixels_per_unit) as f32;
 
+                let bar = Rectangle {
+                    x: bounds.width - BAR_WIDTH * (i + 1) as f32,
+                    y: bounds.height - bar_height,
+                    width: BAR_WIDTH,
+                    height: bar_height,
+                };
+
                 frame.fill_rectangle(
-                    Point::new(
-                        bounds.width - BAR_WIDTH * (i + 1) as f32,
-                        bounds.height - bar_height,
-                    ),
-                    Size::new(BAR_WIDTH, bar_height),
+                    bar.position(),
+                    bar.size(),
                     if value < average_value as f64 / 2.0 {
-                        palette.success.base.color
+                        palette.success.strong.color
                     } else if value > average_value as f64 * 3.0 {
-                        palette.danger.base.color
+                        palette.danger.strong.color
                     } else {
                         palette.background.strong.color
                     },
-                )
+                );
+
+                if !max_drawn && datapoint == max {
+                    let fits = bar.y >= 10.0;
+
+                    frame.fill_text(canvas::Text {
+                        content: (self.to_string)(max),
+                        position: bar.position() + Vector::new(bar.width / 2.0, 0.0),
+                        color: palette.background.base.text,
+                        size: Pixels(10.0),
+                        font: Font::MONOSPACE,
+                        align_x: Center.into(),
+                        align_y: if fits { Bottom } else { Top },
+                        ..canvas::Text::default()
+                    });
+
+                    max_drawn = true;
+                }
+
+                match cursor {
+                    Some(cursor) if bar.contains(cursor) => {
+                        frame.fill_rectangle(
+                            bar.position(),
+                            bar.size(),
+                            Color::BLACK.scale_alpha(0.3),
+                        );
+
+                        let fits = cursor.y >= 10.0;
+
+                        frame.fill_text(canvas::Text {
+                            content: (self.to_string)(datapoint),
+                            position: cursor,
+                            color: palette.background.base.text,
+                            size: Pixels(10.0),
+                            font: Font::MONOSPACE,
+                            align_x: Center.into(),
+                            align_y: if fits { Bottom } else { Top },
+                            ..canvas::Text::default()
+                        });
+                    }
+                    _ => {}
+                }
             }
 
             frame.fill_text(canvas::Text {
-                content: format!("Average: {}", (self.average_to_string)(average)),
+                content: format!("~{}", (self.average_to_string)(average)),
                 position: Point::new(10.0, 0.0),
-                color: palette.background.base.text,
-                size: Pixels(14.0),
-                font: Font::MONOSPACE,
-                ..canvas::Text::default()
-            });
-
-            frame.fill_text(canvas::Text {
-                content: format!("Maximum: {}", (self.to_string)(max)),
-                position: Point::new(10.0, 18.0),
                 color: palette.background.base.text,
                 size: Pixels(14.0),
                 font: Font::MONOSPACE,

@@ -49,7 +49,7 @@ struct Comet {
     state: State,
     theme: Theme,
     timeline: Timeline,
-    playhead: timeline::Index,
+    playhead: timeline::Playhead,
     screen: Screen,
 }
 
@@ -73,10 +73,13 @@ enum Connection {
 enum Message {
     EventReported(beacon::Event),
     PlayheadChanged(timeline::Index),
+    TogglePause,
+    Previous,
+    Next,
     GoLive,
-    Quit,
     ShowOverview,
     ShowUpdate,
+    Quit,
 }
 
 impl Comet {
@@ -87,7 +90,7 @@ impl Comet {
                 state: State::Waiting,
                 theme: Theme::CatppuccinMocha,
                 timeline: Timeline::new(),
-                playhead: timeline::Index::default(),
+                playhead: timeline::Playhead::Live,
                 screen: Screen::Overview(screen::Overview::new()),
             },
             Task::none(),
@@ -99,15 +102,6 @@ impl Comet {
             Message::EventReported(event) => {
                 debug::skip_next_timing();
 
-                match &mut self.screen {
-                    Screen::Overview(overview) => {
-                        overview.invalidate_by(&event);
-                    }
-                    Screen::Update(update) => {
-                        update.invalidate_by(&event);
-                    }
-                }
-
                 match event.clone() {
                     beacon::Event::Connected { name, version, .. } => {
                         let current_name = match &self.state {
@@ -116,7 +110,7 @@ impl Comet {
                         };
 
                         if Some(&name) != current_name {
-                            self.playhead = timeline::Index::default();
+                            self.playhead = timeline::Playhead::Live;
                             self.timeline.clear();
                         }
 
@@ -142,44 +136,58 @@ impl Comet {
                     }
                 }
 
-                let is_live = self.timeline.is_live(self.playhead);
-                let latest = self.timeline.push(event);
-
-                if is_live {
-                    self.playhead = latest;
-                }
+                self.screen.invalidate_by(&event);
+                self.timeline.push(event);
 
                 Task::none()
             }
-            Message::PlayheadChanged(playhead) => {
-                match &mut self.screen {
-                    Screen::Overview(overview) => {
-                        overview.invalidate();
-                    }
-                    Screen::Update(update) => {
-                        update.invalidate();
-                    }
-                }
+            Message::PlayheadChanged(index) => {
+                self.playhead = timeline::Playhead::Paused(index);
+                self.screen.invalidate();
 
-                self.playhead = playhead;
+                Task::none()
+            }
+            Message::TogglePause => {
+                self.playhead = if self.playhead.is_live() {
+                    timeline::Playhead::Paused(self.timeline.end())
+                } else {
+                    timeline::Playhead::Live
+                };
+
+                Task::none()
+            }
+            Message::Previous => {
+                self.playhead = match self.playhead {
+                    timeline::Playhead::Live => timeline::Playhead::Paused(self.timeline.end()),
+                    timeline::Playhead::Paused(index) => timeline::Playhead::Paused(index - 1),
+                };
+
+                self.screen.invalidate();
+
+                Task::none()
+            }
+            Message::Next => {
+                self.playhead = match self.playhead {
+                    timeline::Playhead::Live => timeline::Playhead::Live,
+                    timeline::Playhead::Paused(index) => {
+                        if index + 1 == self.timeline.end() {
+                            timeline::Playhead::Live
+                        } else {
+                            timeline::Playhead::Paused(index + 1)
+                        }
+                    }
+                };
+
+                self.screen.invalidate();
 
                 Task::none()
             }
             Message::GoLive => {
-                match &mut self.screen {
-                    Screen::Overview(overview) => {
-                        overview.invalidate();
-                    }
-                    Screen::Update(update) => {
-                        update.invalidate();
-                    }
-                }
-
-                self.playhead = *self.timeline.range().end();
+                self.playhead = timeline::Playhead::Live;
+                self.screen.invalidate();
 
                 Task::none()
             }
-            Message::Quit => iced::exit(),
             Message::ShowOverview => {
                 self.screen = Screen::Overview(screen::Overview::new());
 
@@ -190,6 +198,7 @@ impl Comet {
 
                 Task::none()
             }
+            Message::Quit => iced::exit(),
         }
     }
 
@@ -307,12 +316,12 @@ impl Comet {
 
                     let timeline = slider(
                         self.timeline.range(),
-                        self.playhead,
+                        self.timeline.index(self.playhead),
                         Message::PlayheadChanged,
                     );
 
                     let live: Element<_> = {
-                        let is_live = self.timeline.is_live(self.playhead);
+                        let is_live = self.playhead.is_live();
 
                         let indicator = circle(move |palette| {
                             if is_live {
@@ -351,8 +360,13 @@ impl Comet {
     fn subscription(&self) -> Subscription<Message> {
         let beacon = Subscription::run(beacon::run).map(Message::EventReported);
 
-        let hotkeys = keyboard::on_key_press(|key, _| match key {
+        let hotkeys = keyboard::on_key_press(|key, _| match key.as_ref() {
             keyboard::Key::Named(keyboard::key::Named::F12) => Some(Message::Quit),
+            keyboard::Key::Named(keyboard::key::Named::Space) => Some(Message::TogglePause),
+            keyboard::Key::Named(keyboard::key::Named::ArrowLeft) => Some(Message::Previous),
+            keyboard::Key::Named(keyboard::key::Named::ArrowRight) => Some(Message::Next),
+            keyboard::Key::Character("o") => Some(Message::ShowOverview),
+            keyboard::Key::Character("u") => Some(Message::ShowUpdate),
             _ => None,
         });
 
