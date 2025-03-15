@@ -6,8 +6,8 @@ use iced::mouse;
 use iced::time::SystemTime;
 use iced::widget::canvas;
 use iced::{
-    Bottom, Center, Color, Element, Event, Fill, Font, Pixels, Point, Rectangle, Renderer, Theme,
-    Top, Vector,
+    Bottom, Center, Color, Element, Event, Fill, Font, Pixels, Point, Rectangle, Renderer, Size,
+    Theme, Top, Vector,
 };
 
 use std::fmt;
@@ -346,12 +346,21 @@ where
                 }
             }
 
+            let average_y = average_value * pixels_per_unit;
+
+            frame.fill_rectangle(
+                Point::new(0.0, average_y as f32),
+                Size::new(frame.width(), 1.0),
+                palette.background.base.text.scale_alpha(0.5),
+            );
+
             frame.fill_text(canvas::Text {
                 content: format!("~{}", (self.average_to_string)(average)),
-                position: Point::new(10.0, 0.0),
+                position: Point::new(5.0, average_y as f32 - 2.0),
                 color: palette.background.base.text,
                 size: Pixels(14.0),
                 font: Font::MONOSPACE,
+                align_y: Bottom,
                 ..canvas::Text::default()
             });
         });
