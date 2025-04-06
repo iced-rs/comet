@@ -1,6 +1,6 @@
 [package]
 name = "iced_comet"
-version = "0.1.0"
+version = "0.14.0-dev"
 edition = "2024"
 
 [features]
@@ -22,7 +22,7 @@ version = "0.14.0-dev"
 
 [patch.crates-io]
 iced.git = "https://github.com/iced-rs/iced.git"
-iced.rev = "121102e55beaa52c78a43eb5e60b07769c2b5b04"
+iced.rev = "00ee6ab47a0eefbce3db533eb94c5f954d9e8a0f"
 
 iced_beacon.git = "https://github.com/iced-rs/iced.git"
-iced_beacon.rev = "121102e55beaa52c78a43eb5e60b07769c2b5b04"
+iced_beacon.rev = "00ee6ab47a0eefbce3db533eb94c5f954d9e8a0f"
