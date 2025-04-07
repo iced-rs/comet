@@ -51,7 +51,7 @@ impl fmt::Display for Stage {
             Stage::Interact => "Interact",
             Stage::Draw => "Draw",
             Stage::Present => "Present",
-            Stage::Custom(name) => &name,
+            Stage::Custom(name) => name,
         })
     }
 }
@@ -67,7 +67,7 @@ where
 {
     canvas(BarChart {
         datapoints: timeline
-            .timeframes(playhead, &stage)
+            .timeframes(playhead, stage)
             .map(|timeframe| timeframe.duration),
         cache,
         to_float: |duration| duration.as_secs_f64(),
@@ -161,7 +161,7 @@ where
         });
 
         std::iter::from_fn(move || {
-            while let Some(time) = updates.next() {
+            for time in updates.by_ref() {
                 let second = time
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap_or_default()
@@ -265,9 +265,8 @@ where
                     .datapoints
                     .clone()
                     .take(amount * 3)
-                    .map(|datapoint| {
+                    .inspect(|_datapoint| {
                         n += 1;
-                        datapoint
                     })
                     .sum::<T>();
 
@@ -296,9 +295,9 @@ where
                 frame.fill_rectangle(
                     bar.position(),
                     bar.size(),
-                    if value < average_value as f64 / 2.0 {
+                    if value < average_value / 2.0 {
                         palette.success.strong.color
-                    } else if value > average_value as f64 * 3.0 {
+                    } else if value > average_value * 3.0 {
                         palette.danger.weak.color
                     } else {
                         palette.background.strong.color

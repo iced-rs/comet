@@ -27,10 +27,10 @@ impl Screen {
     pub fn invalidate_by(&mut self, event: &Event) {
         match self {
             Screen::Overview(overview) => {
-                overview.invalidate_by(&event);
+                overview.invalidate_by(event);
             }
             Screen::Update(update) => {
-                update.invalidate_by(&event);
+                update.invalidate_by(event);
             }
         }
     }
