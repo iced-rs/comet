@@ -51,12 +51,20 @@ impl Update {
         &'a self,
         timeline: &'a Timeline,
         playhead: timeline::Playhead,
+        bar_width: chart::BarWidth,
     ) -> Element<'a, Message> {
-        let update = chart::performance(timeline, playhead, &self.update, &chart::Stage::Update);
-        let tasks_spawned = chart::tasks_spawned(timeline, playhead, &self.tasks_spawned);
+        let update = chart::performance(
+            timeline,
+            playhead,
+            &self.update,
+            &chart::Stage::Update,
+            bar_width,
+        );
+        let tasks_spawned =
+            chart::tasks_spawned(timeline, playhead, &self.tasks_spawned, bar_width);
         let subscriptions_alive =
-            chart::subscriptions_alive(timeline, playhead, &self.subscriptions_alive);
-        let message_rate = chart::message_rate(timeline, playhead, &self.message_rate);
+            chart::subscriptions_alive(timeline, playhead, &self.subscriptions_alive, bar_width);
+        let message_rate = chart::message_rate(timeline, playhead, &self.message_rate, bar_width);
 
         let message_log = container(
             scrollable(

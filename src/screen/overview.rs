@@ -68,6 +68,7 @@ impl Overview {
         &'a self,
         timeline: &'a Timeline,
         playhead: timeline::Playhead,
+        bar_width: chart::BarWidth,
     ) -> Element<'a, Message> {
         let update = (&chart::Stage::Update, &self.update);
         let view = (&chart::Stage::View, &self.view);
@@ -81,7 +82,7 @@ impl Overview {
                 row(charts.iter().map(|(stage, cache)| {
                     card(
                         stage.to_string(),
-                        chart::performance(timeline, playhead, cache, stage),
+                        chart::performance(timeline, playhead, cache, stage, bar_width),
                     )
                 }))
                 .spacing(10)

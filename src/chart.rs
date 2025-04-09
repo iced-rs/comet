@@ -74,11 +74,31 @@ impl fmt::Display for Stage {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BarWidth(u16);
+
+impl BarWidth {
+    pub fn increment(self) -> Self {
+        Self(self.0.saturating_add(1).min(10))
+    }
+
+    pub fn decrement(self) -> Self {
+        Self(self.0.saturating_sub(1).max(1))
+    }
+}
+
+impl Default for BarWidth {
+    fn default() -> Self {
+        Self(2)
+    }
+}
+
 pub fn performance<'a, Message>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
     stage: &Stage,
+    bar_width: BarWidth,
 ) -> Element<'a, Message>
 where
     Message: 'a,
@@ -93,6 +113,7 @@ where
         average: |duration, n| duration / n,
         average_to_float: |duration| duration.as_secs_f64(),
         average_to_string: |duration| format!("{duration:?}"),
+        bar_width,
     })
     .width(Fill)
     .height(Fill)
@@ -103,6 +124,7 @@ pub fn tasks_spawned<'a, Message>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
+    bar_width: BarWidth,
 ) -> Element<'a, Message>
 where
     Message: 'a,
@@ -123,6 +145,7 @@ where
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1}", average),
+        bar_width,
     })
     .width(Fill)
     .height(Fill)
@@ -133,6 +156,7 @@ pub fn subscriptions_alive<'a, Message>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
+    bar_width: BarWidth,
 ) -> Element<'a, Message>
 where
     Message: 'a,
@@ -148,6 +172,7 @@ where
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1}", average),
+        bar_width,
     })
     .width(Fill)
     .height(Fill)
@@ -158,6 +183,7 @@ pub fn message_rate<'a, Message>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
+    bar_width: BarWidth,
 ) -> Element<'a, Message>
 where
     Message: 'a,
@@ -209,6 +235,7 @@ where
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1} msg/s", average),
+        bar_width,
     })
     .width(Fill)
     .height(Fill)
@@ -226,6 +253,7 @@ where
     average: fn(T, u32) -> A,
     average_to_float: fn(A) -> f64,
     average_to_string: fn(A) -> String,
+    bar_width: BarWidth,
 }
 
 impl<'a, Message, I, T, A> canvas::Program<Message> for BarChart<'a, I, T, A>
@@ -261,16 +289,14 @@ where
         bounds: Rectangle,
         cursor: mouse::Cursor,
     ) -> Vec<canvas::Geometry> {
-        // TODO: Zoom
-        const BAR_WIDTH: f32 = 10.0;
-
         let geometry = self.cache.draw(renderer, bounds.size(), |frame| {
             let cursor = cursor.position_in(bounds);
 
             let bounds = frame.size();
             let palette = theme.extended_palette();
 
-            let amount = (bounds.width / BAR_WIDTH).ceil() as usize;
+            let bar_width = f32::from(self.bar_width.0);
+            let amount = (bounds.width / bar_width).ceil() as usize;
 
             let Some(max) = self.datapoints.clone().take(amount).max() else {
                 return;
@@ -304,9 +330,9 @@ where
                 let bar_height = (value * pixels_per_unit) as f32;
 
                 let bar = Rectangle {
-                    x: bounds.width - BAR_WIDTH * (i + 1) as f32,
+                    x: bounds.width - bar_width * (i + 1) as f32,
                     y: bounds.height - bar_height,
-                    width: BAR_WIDTH,
+                    width: bar_width,
                     height: bar_height,
                 };
 

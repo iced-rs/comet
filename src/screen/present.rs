@@ -92,6 +92,7 @@ impl Present {
         &'a self,
         timeline: &'a Timeline,
         playhead: timeline::Playhead,
+        bar_width: chart::BarWidth,
     ) -> Element<'a, Message> {
         let primitives = [
             Some((span::Primitive::Quad, &self.quad)),
@@ -115,11 +116,17 @@ impl Present {
             row![
                 card(
                     prepare_stage.to_string(),
-                    chart::performance(timeline, playhead, &cache.prepare, &prepare_stage)
+                    chart::performance(
+                        timeline,
+                        playhead,
+                        &cache.prepare,
+                        &prepare_stage,
+                        bar_width
+                    )
                 ),
                 card(
                     render_stage.to_string(),
-                    chart::performance(timeline, playhead, &cache.render, &render_stage)
+                    chart::performance(timeline, playhead, &cache.render, &render_stage, bar_width)
                 ),
             ]
             .spacing(10)
@@ -128,7 +135,13 @@ impl Present {
 
         let charts = [card(
             "Present",
-            chart::performance(timeline, playhead, &self.present, &chart::Stage::Present),
+            chart::performance(
+                timeline,
+                playhead,
+                &self.present,
+                &chart::Stage::Present,
+                bar_width,
+            ),
         )]
         .into_iter()
         .chain(primitives);
