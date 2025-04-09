@@ -126,7 +126,14 @@ impl Present {
             .into()
         });
 
-        column(primitives).spacing(10).into()
+        let charts = [card(
+            "Present",
+            chart::performance(timeline, playhead, &self.present, &chart::Stage::Present),
+        )]
+        .into_iter()
+        .chain(primitives);
+
+        column(charts).spacing(10).into()
     }
 }
 
