@@ -1,7 +1,9 @@
 mod overview;
+mod present;
 mod update;
 
 pub use overview::Overview;
+pub use present::Present;
 pub use update::Update;
 
 use crate::beacon::Event;
@@ -10,6 +12,7 @@ use crate::beacon::Event;
 pub enum Screen {
     Overview(Overview),
     Update(Update),
+    Present(Present),
 }
 
 impl Screen {
@@ -21,6 +24,9 @@ impl Screen {
             Screen::Update(update) => {
                 update.invalidate();
             }
+            Screen::Present(render) => {
+                render.invalidate();
+            }
         }
     }
 
@@ -31,6 +37,9 @@ impl Screen {
             }
             Screen::Update(update) => {
                 update.invalidate_by(event);
+            }
+            Self::Present(render) => {
+                render.invalidate_by(event);
             }
         }
     }

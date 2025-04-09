@@ -79,6 +79,7 @@ enum Message {
     GoLive,
     ShowOverview,
     ShowUpdate,
+    ShowPresent,
     Quit,
 }
 
@@ -200,6 +201,11 @@ impl Comet {
 
                 Task::none()
             }
+            Message::ShowPresent => {
+                self.screen = Screen::Present(screen::Present::new());
+
+                Task::none()
+            }
             Message::Quit => iced::exit(),
         }
     }
@@ -278,6 +284,11 @@ impl Comet {
                                 Message::ShowUpdate,
                                 matches!(self.screen, Screen::Update(_))
                             ),
+                            tab(
+                                "Present",
+                                Message::ShowPresent,
+                                matches!(self.screen, Screen::Present(_))
+                            )
                         ]
                         .spacing(10)
                         .align_y(Center)
@@ -292,6 +303,7 @@ impl Comet {
                 let screen = match &self.screen {
                     Screen::Overview(overview) => overview.view(&self.timeline, self.playhead),
                     Screen::Update(update) => update.view(&self.timeline, self.playhead),
+                    Screen::Present(present) => present.view(&self.timeline, self.playhead),
                 };
 
                 let timeline = {
@@ -369,6 +381,7 @@ impl Comet {
             keyboard::Key::Named(keyboard::key::Named::ArrowRight) => Some(Message::Next),
             keyboard::Key::Character("o") => Some(Message::ShowOverview),
             keyboard::Key::Character("u") => Some(Message::ShowUpdate),
+            keyboard::Key::Character("p") => Some(Message::ShowPresent),
             _ => None,
         });
 

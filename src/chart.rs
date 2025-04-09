@@ -23,6 +23,8 @@ pub enum Stage {
     Interact,
     Draw,
     Present,
+    Prepare(span::Primitive),
+    Render(span::Primitive),
     Custom(String),
 }
 
@@ -36,6 +38,8 @@ impl From<span::Stage> for Stage {
             span::Stage::Interact(_id) => Stage::Interact,
             span::Stage::Draw(_id) => Stage::Draw,
             span::Stage::Present(_id) => Stage::Present,
+            span::Stage::Prepare(primitive) => Stage::Prepare(primitive),
+            span::Stage::Render(primitive) => Stage::Render(primitive),
             span::Stage::Custom(_id, name) => Stage::Custom(name),
         }
     }
@@ -51,6 +55,20 @@ impl fmt::Display for Stage {
             Stage::Interact => "Interact",
             Stage::Draw => "Draw",
             Stage::Present => "Present",
+            Stage::Prepare(primitive) => match primitive {
+                span::Primitive::Quad => "Quad (prepare)",
+                span::Primitive::Triangle => "Triangle (prepare)",
+                span::Primitive::Shader => "Shader (prepare)",
+                span::Primitive::Image => "Image (prepare)",
+                span::Primitive::Text => "Text (prepare)",
+            },
+            Stage::Render(primitive) => match primitive {
+                span::Primitive::Quad => "Quad (render)",
+                span::Primitive::Triangle => "Triangle (render)",
+                span::Primitive::Shader => "Shader (render)",
+                span::Primitive::Image => "Image (render)",
+                span::Primitive::Text => "Text (render)",
+            },
             Stage::Custom(name) => name,
         })
     }
@@ -60,14 +78,14 @@ pub fn performance<'a, Message>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
-    stage: &'a Stage,
+    stage: &Stage,
 ) -> Element<'a, Message>
 where
     Message: 'a,
 {
     canvas(BarChart {
         datapoints: timeline
-            .timeframes(playhead, stage)
+            .timeframes(playhead, stage.clone())
             .map(|timeframe| timeframe.duration),
         cache,
         to_float: |duration| duration.as_secs_f64(),

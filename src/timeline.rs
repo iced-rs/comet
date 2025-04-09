@@ -65,14 +65,14 @@ impl Timeline {
             .skip(self.events.len().saturating_sub(index.0))
     }
 
-    pub fn timeframes<'a>(
-        &'a self,
+    pub fn timeframes(
+        &self,
         playhead: Playhead,
-        stage: &'a chart::Stage,
-    ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + 'a {
+        stage: chart::Stage,
+    ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + '_ {
         self.seek(playhead).filter_map(move |event| match event {
             beacon::Event::SpanFinished { at, duration, span }
-                if &chart::Stage::from(span.stage()) == stage =>
+                if chart::Stage::from(span.stage()) == stage =>
             {
                 Some(Timeframe {
                     at: *at,

@@ -52,7 +52,10 @@ impl Overview {
                 span::Stage::Present(_id) => {
                     self.present.clear();
                 }
-                span::Stage::Boot | span::Stage::Custom(_, _) => {}
+                span::Stage::Boot
+                | span::Stage::Prepare { .. }
+                | span::Stage::Render { .. }
+                | span::Stage::Custom(_, _) => {}
             },
             Event::ThemeChanged { .. } => {
                 self.invalidate();
