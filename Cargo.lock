@@ -1458,7 +1458,6 @@ dependencies = [
  "iced_palace",
  "log",
  "num-traits",
- "rand 0.9.0",
  "tracing-subscriber",
 ]
 
