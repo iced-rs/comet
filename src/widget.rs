@@ -1,23 +1,10 @@
-use iced::advanced;
 use iced::border;
 use iced::padding;
 use iced::theme::palette;
 use iced::widget::{column, container, horizontal_space, text};
 use iced::{Background, Color, Element, Font, Theme};
 
-mod diffused_text;
-
-use diffused_text::DiffusedText;
-
-pub fn diffused_text<'a, Theme, Renderer>(
-    fragment: impl text::IntoFragment<'a>,
-) -> DiffusedText<'a, Theme, Renderer>
-where
-    Theme: text::Catalog,
-    Renderer: advanced::text::Renderer,
-{
-    DiffusedText::new(fragment)
-}
+pub use iced_palace::widget::diffused_text;
 
 pub fn card<'a, Message: 'a>(
     title: impl text::IntoFragment<'a>,
