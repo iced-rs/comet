@@ -2,6 +2,9 @@ mod overview;
 mod present;
 mod update;
 
+pub mod custom;
+
+pub use custom::Custom;
 pub use overview::Overview;
 pub use present::Present;
 pub use update::Update;
@@ -13,19 +16,23 @@ pub enum Screen {
     Overview(Overview),
     Update(Update),
     Present(Present),
+    Custom(Custom),
 }
 
 impl Screen {
     pub fn invalidate(&mut self) {
         match self {
-            Screen::Overview(overview) => {
+            Self::Overview(overview) => {
                 overview.invalidate();
             }
-            Screen::Update(update) => {
+            Self::Update(update) => {
                 update.invalidate();
             }
-            Screen::Present(render) => {
+            Self::Present(render) => {
                 render.invalidate();
+            }
+            Self::Custom(custom) => {
+                custom.invalidate();
             }
         }
     }
@@ -40,6 +47,9 @@ impl Screen {
             }
             Self::Present(render) => {
                 render.invalidate_by(event);
+            }
+            Self::Custom(custom) => {
+                custom.invalidate_by(event);
             }
         }
     }

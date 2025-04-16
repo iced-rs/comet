@@ -55,7 +55,7 @@ impl Overview {
                 span::Stage::Boot
                 | span::Stage::Prepare { .. }
                 | span::Stage::Render { .. }
-                | span::Stage::Custom(_, _) => {}
+                | span::Stage::Custom(_) => {}
             },
             Event::ThemeChanged { .. } => {
                 self.invalidate();

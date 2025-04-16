@@ -40,7 +40,7 @@ impl From<span::Stage> for Stage {
             span::Stage::Present(_id) => Stage::Present,
             span::Stage::Prepare(primitive) => Stage::Prepare(primitive),
             span::Stage::Render(primitive) => Stage::Render(primitive),
-            span::Stage::Custom(_id, name) => Stage::Custom(name),
+            span::Stage::Custom(name) => Stage::Custom(name),
         }
     }
 }

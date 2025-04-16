@@ -10,8 +10,8 @@ use crate::screen::Screen;
 use crate::timeline::Timeline;
 use crate::widget::{circle, diffused_text};
 
-use iced::advanced::debug;
 use iced::border;
+use iced::debug;
 use iced::keyboard;
 use iced::time::SystemTime;
 use iced::widget::{
@@ -81,6 +81,8 @@ enum Message {
     ShowOverview,
     ShowUpdate,
     ShowPresent,
+    ShowCustom,
+    Custom(screen::custom::Message),
     IncrementBarWidth,
     DecrementBarWidth,
     Quit,
@@ -210,6 +212,18 @@ impl Comet {
 
                 Task::none()
             }
+            Message::ShowCustom => {
+                self.screen = Screen::Custom(screen::Custom::new(&self.timeline, self.playhead));
+
+                Task::none()
+            }
+            Message::Custom(message) => {
+                if let Screen::Custom(custom) = &mut self.screen {
+                    custom.update(message);
+                }
+
+                Task::none()
+            }
             Message::IncrementBarWidth => {
                 self.bar_width = self.bar_width.increment();
                 self.screen.invalidate();
@@ -304,6 +318,11 @@ impl Comet {
                                 "Present",
                                 Message::ShowPresent,
                                 matches!(self.screen, Screen::Present(_))
+                            ),
+                            tab(
+                                "Custom",
+                                Message::ShowCustom,
+                                matches!(self.screen, Screen::Custom(_))
                             )
                         ]
                         .spacing(10)
@@ -326,6 +345,9 @@ impl Comet {
                     Screen::Present(present) => {
                         present.view(&self.timeline, self.playhead, self.bar_width)
                     }
+                    Screen::Custom(custom) => custom
+                        .view(&self.timeline, self.playhead, self.bar_width)
+                        .map(Message::Custom),
                 };
 
                 let timeline = {
@@ -404,6 +426,7 @@ impl Comet {
             keyboard::Key::Character("o") => Some(Message::ShowOverview),
             keyboard::Key::Character("u") => Some(Message::ShowUpdate),
             keyboard::Key::Character("p") => Some(Message::ShowPresent),
+            keyboard::Key::Character("c") => Some(Message::ShowCustom),
             keyboard::Key::Named(keyboard::key::Named::ArrowUp) => Some(Message::IncrementBarWidth),
             keyboard::Key::Named(keyboard::key::Named::ArrowDown) => {
                 Some(Message::DecrementBarWidth)
