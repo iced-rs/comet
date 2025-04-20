@@ -102,7 +102,7 @@ impl Custom {
         &'a self,
         timeline: &'a Timeline,
         playhead: timeline::Playhead,
-        bar_width: chart::BarWidth,
+        zoom: chart::Zoom,
     ) -> Element<'a, Message> {
         if self.timings.is_empty() {
             let code = |text| {
@@ -145,7 +145,7 @@ impl Custom {
                     playhead,
                     cache,
                     &chart::Stage::Custom(name.to_owned()), // TODO: Avoid allocation (?)
-                    bar_width,
+                    zoom,
                 )
                 .map(Message::Chart),
             )

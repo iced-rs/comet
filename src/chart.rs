@@ -19,6 +19,7 @@ pub use canvas::Cache;
 pub enum Interaction {
     Hovered(timeline::Index),
     Unhovered,
+    ZoomChanged(Zoom),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,9 +83,9 @@ impl fmt::Display for Stage {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct BarWidth(u16);
+pub struct Zoom(u16);
 
-impl BarWidth {
+impl Zoom {
     pub fn increment(self) -> Self {
         Self(self.0.saturating_add(1).min(10))
     }
@@ -94,7 +95,7 @@ impl BarWidth {
     }
 }
 
-impl Default for BarWidth {
+impl Default for Zoom {
     fn default() -> Self {
         Self(2)
     }
@@ -105,7 +106,7 @@ pub fn performance<'a>(
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
     stage: &Stage,
-    bar_width: BarWidth,
+    zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
@@ -117,7 +118,7 @@ pub fn performance<'a>(
         average: |duration, n| duration / n,
         average_to_float: |duration| duration.as_secs_f64(),
         average_to_string: |duration| format!("{duration:?}"),
-        bar_width,
+        zoom,
     })
     .width(Fill)
     .height(Fill)
@@ -129,7 +130,7 @@ pub fn updates<'a>(
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
     stage: &Stage,
-    bar_width: BarWidth,
+    zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
@@ -141,7 +142,7 @@ pub fn updates<'a>(
         average: |duration, n| duration / n,
         average_to_float: |duration| duration.as_secs_f64(),
         average_to_string: |duration| format!("{duration:?}"),
-        bar_width,
+        zoom,
     })
     .width(Fill)
     .height(Fill)
@@ -152,7 +153,7 @@ pub fn tasks_spawned<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
-    bar_width: BarWidth,
+    zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
@@ -173,7 +174,7 @@ pub fn tasks_spawned<'a>(
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1}", average),
-        bar_width,
+        zoom,
     })
     .width(Fill)
     .height(Fill)
@@ -184,7 +185,7 @@ pub fn subscriptions_alive<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
-    bar_width: BarWidth,
+    zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
@@ -201,7 +202,7 @@ pub fn subscriptions_alive<'a>(
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1}", average),
-        bar_width,
+        zoom,
     })
     .width(Fill)
     .height(Fill)
@@ -212,7 +213,7 @@ pub fn message_rate<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
-    bar_width: BarWidth,
+    zoom: Zoom,
 ) -> Element<'a, Interaction> {
     let updates_per_second = {
         let mut updates =
@@ -271,7 +272,7 @@ pub fn message_rate<'a>(
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1} msg/s", average),
-        bar_width,
+        zoom,
     })
     .width(Fill)
     .height(Fill)
@@ -289,7 +290,7 @@ where
     average: fn(T, u32) -> A,
     average_to_float: fn(A) -> f64,
     average_to_string: fn(A) -> String,
-    bar_width: BarWidth,
+    zoom: Zoom,
 }
 
 impl<'a, I, T, A> canvas::Program<Interaction> for BarChart<'a, I, T, A>
@@ -320,7 +321,7 @@ where
                     }
                 };
 
-                let bar = ((bounds.width - position.x) / self.bar_width.0 as f32) as usize;
+                let bar = ((bounds.width - position.x) / self.zoom.0 as f32) as usize;
 
                 let (index, _datapoint) = self
                     .datapoints
@@ -336,6 +337,23 @@ where
                 self.cache.clear();
 
                 Some(canvas::Action::publish(Interaction::Hovered(index)))
+            }
+            Event::Mouse(mouse::Event::WheelScrolled { delta }) if cursor.is_over(bounds) => {
+                match delta {
+                    mouse::ScrollDelta::Lines { y, .. } | mouse::ScrollDelta::Pixels { y, .. } => {
+                        let new_zoom = if y.is_sign_positive() {
+                            self.zoom.increment()
+                        } else {
+                            self.zoom.decrement()
+                        };
+
+                        if new_zoom == self.zoom {
+                            return None;
+                        }
+
+                        Some(canvas::Action::publish(Interaction::ZoomChanged(new_zoom)))
+                    }
+                }
             }
             _ => None,
         }
@@ -355,7 +373,7 @@ where
             let bounds = frame.size();
             let palette = theme.extended_palette();
 
-            let bar_width = f32::from(self.bar_width.0);
+            let bar_width = f32::from(self.zoom.0);
             let amount = (bounds.width / bar_width).ceil() as usize;
 
             let datapoints = self.datapoints.clone().map(|(_i, datapoint)| datapoint);

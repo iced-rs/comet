@@ -51,7 +51,7 @@ struct Comet {
     timeline: Timeline,
     playhead: timeline::Playhead,
     screen: Screen,
-    bar_width: chart::BarWidth,
+    zoom: chart::Zoom,
 }
 
 #[derive(Debug)]
@@ -104,7 +104,7 @@ impl Comet {
                 timeline: Timeline::new(),
                 playhead: timeline::Playhead::Live,
                 screen: Screen::Overview(screen::Overview::new()),
-                bar_width: chart::BarWidth::default(),
+                zoom: chart::Zoom::default(),
             },
             Task::none(),
         )
@@ -220,13 +220,13 @@ impl Comet {
             }
             Message::Chart(interaction) => self.interact_with_chart(interaction),
             Message::IncrementBarWidth => {
-                self.bar_width = self.bar_width.increment();
+                self.zoom = self.zoom.increment();
                 self.screen.invalidate();
 
                 Task::none()
             }
             Message::DecrementBarWidth => {
-                self.bar_width = self.bar_width.decrement();
+                self.zoom = self.zoom.decrement();
                 self.screen.invalidate();
 
                 Task::none()
@@ -239,6 +239,12 @@ impl Comet {
         match interaction {
             chart::Interaction::Hovered(index) => self.rewind(index),
             chart::Interaction::Unhovered => self.go_live(),
+            chart::Interaction::ZoomChanged(zoom) => {
+                self.zoom = zoom;
+                self.screen.invalidate();
+
+                Task::none()
+            }
         }
     }
 
@@ -393,16 +399,16 @@ impl Comet {
 
                 let screen = match &self.screen {
                     Screen::Overview(overview) => overview
-                        .view(&self.timeline, self.playhead, self.bar_width)
+                        .view(&self.timeline, self.playhead, self.zoom)
                         .map(Message::Chart),
                     Screen::Update(update) => update
-                        .view(&self.timeline, self.playhead, self.bar_width)
+                        .view(&self.timeline, self.playhead, self.zoom)
                         .map(Message::Chart),
                     Screen::Present(present) => present
-                        .view(&self.timeline, self.playhead, self.bar_width)
+                        .view(&self.timeline, self.playhead, self.zoom)
                         .map(Message::Chart),
                     Screen::Custom(custom) => custom
-                        .view(&self.timeline, self.playhead, self.bar_width)
+                        .view(&self.timeline, self.playhead, self.zoom)
                         .map(Message::Custom),
                 };
 
