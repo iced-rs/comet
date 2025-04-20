@@ -21,13 +21,13 @@ tracing-subscriber = "0.3"
 
 [patch.crates-io]
 iced.git = "https://github.com/iced-rs/iced.git"
-iced.rev = "2e0c03923ca08184d520c190927a01e314dea2d4"
+iced.rev = "5ce3892a1e32a8c4ae0d248b3fdab494d2d0dcae"
 
 iced_core.git = "https://github.com/iced-rs/iced.git"
-iced_core.rev = "2e0c03923ca08184d520c190927a01e314dea2d4"
+iced_core.rev = "5ce3892a1e32a8c4ae0d248b3fdab494d2d0dcae"
 
 iced_beacon.git = "https://github.com/iced-rs/iced.git"
-iced_beacon.rev = "2e0c03923ca08184d520c190927a01e314dea2d4"
+iced_beacon.rev = "5ce3892a1e32a8c4ae0d248b3fdab494d2d0dcae"
 
 iced_palace.git = "https://github.com/hecrj/iced_palace.git"
 iced_palace.rev = "7d9364bd0530927d5cfc0eb70866075e51f54f58"

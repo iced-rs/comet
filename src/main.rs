@@ -7,11 +7,11 @@ mod timeline;
 mod widget;
 
 use crate::screen::Screen;
+use crate::screen::custom;
 use crate::timeline::Timeline;
 use crate::widget::{circle, diffused_text};
 
 use iced::border;
-use iced::debug;
 use iced::keyboard;
 use iced::time::SystemTime;
 use iced::widget::{
@@ -66,8 +66,13 @@ enum State {
 #[derive(Debug)]
 #[allow(dead_code)]
 enum Connection {
-    Connected { version: beacon::Version },
-    Disconnected { at: SystemTime },
+    Connected {
+        client: beacon::Connection,
+        version: beacon::Version,
+    },
+    Disconnected {
+        at: SystemTime,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -82,7 +87,8 @@ enum Message {
     ShowUpdate,
     ShowPresent,
     ShowCustom,
-    Custom(screen::custom::Message),
+    Custom(custom::Message),
+    Chart(chart::Interaction),
     IncrementBarWidth,
     DecrementBarWidth,
     Quit,
@@ -107,10 +113,13 @@ impl Comet {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::EventReported(event) => {
-                debug::skip_next_timing();
-
                 match event.clone() {
-                    beacon::Event::Connected { name, version, .. } => {
+                    beacon::Event::Connected {
+                        connection,
+                        name,
+                        version,
+                        ..
+                    } => {
                         let current_name = match &self.state {
                             State::Working { name, .. } => Some(name),
                             State::Waiting => None,
@@ -123,7 +132,10 @@ impl Comet {
 
                         self.state = State::Working {
                             name,
-                            connection: Connection::Connected { version },
+                            connection: Connection::Connected {
+                                client: connection,
+                                version,
+                            },
                         };
                     }
                     beacon::Event::Disconnected { at } => {
@@ -149,54 +161,28 @@ impl Comet {
                 Task::none()
             }
             Message::PlayheadChanged(index) => {
-                self.playhead = timeline::Playhead::Paused(index);
-                self.screen.invalidate();
-
-                Task::none()
+                self.update_playhead(timeline::Playhead::Paused(index))
             }
-            Message::TogglePause => {
-                self.playhead = if self.playhead.is_live() {
-                    timeline::Playhead::Paused(self.timeline.end())
-                } else {
-                    timeline::Playhead::Live
-                };
-
-                self.screen.invalidate();
-
-                Task::none()
-            }
-            Message::Previous => {
-                self.playhead = match self.playhead {
-                    timeline::Playhead::Live => timeline::Playhead::Paused(self.timeline.end()),
-                    timeline::Playhead::Paused(index) => timeline::Playhead::Paused(index - 1),
-                };
-
-                self.screen.invalidate();
-
-                Task::none()
-            }
-            Message::Next => {
-                self.playhead = match self.playhead {
-                    timeline::Playhead::Live => timeline::Playhead::Live,
-                    timeline::Playhead::Paused(index) => {
-                        if index + 1 >= self.timeline.end() {
-                            timeline::Playhead::Live
-                        } else {
-                            timeline::Playhead::Paused(index + 1)
-                        }
+            Message::TogglePause => self.update_playhead(if self.playhead.is_live() {
+                timeline::Playhead::Paused(self.timeline.end())
+            } else {
+                timeline::Playhead::Live
+            }),
+            Message::Previous => self.update_playhead(match self.playhead {
+                timeline::Playhead::Live => timeline::Playhead::Paused(self.timeline.end()),
+                timeline::Playhead::Paused(index) => timeline::Playhead::Paused(index - 1),
+            }),
+            Message::Next => self.update_playhead(match self.playhead {
+                timeline::Playhead::Live => timeline::Playhead::Live,
+                timeline::Playhead::Paused(index) => {
+                    if index + 1 >= self.timeline.end() {
+                        timeline::Playhead::Live
+                    } else {
+                        timeline::Playhead::Paused(index + 1)
                     }
-                };
-
-                self.screen.invalidate();
-
-                Task::none()
-            }
-            Message::GoLive => {
-                self.playhead = timeline::Playhead::Live;
-                self.screen.invalidate();
-
-                Task::none()
-            }
+                }
+            }),
+            Message::GoLive => self.update_playhead(timeline::Playhead::Live),
             Message::ShowOverview => {
                 self.screen = Screen::Overview(screen::Overview::new());
 
@@ -218,12 +204,21 @@ impl Comet {
                 Task::none()
             }
             Message::Custom(message) => {
-                if let Screen::Custom(custom) = &mut self.screen {
-                    custom.update(message);
-                }
+                let Screen::Custom(custom) = &mut self.screen else {
+                    return Task::none();
+                };
 
-                Task::none()
+                if let Some(event) = custom.update(message) {
+                    match event {
+                        custom::Event::ChartInteracted(interaction) => {
+                            self.interact_with_chart(interaction)
+                        }
+                    }
+                } else {
+                    Task::none()
+                }
             }
+            Message::Chart(interaction) => self.interact_with_chart(interaction),
             Message::IncrementBarWidth => {
                 self.bar_width = self.bar_width.increment();
                 self.screen.invalidate();
@@ -238,6 +233,67 @@ impl Comet {
             }
             Message::Quit => iced::exit(),
         }
+    }
+
+    fn interact_with_chart(&mut self, interaction: chart::Interaction) -> Task<Message> {
+        match interaction {
+            chart::Interaction::Hovered(index) => self.rewind(index),
+            chart::Interaction::Unhovered => self.go_live(),
+        }
+    }
+
+    fn update_playhead(&mut self, playhead: timeline::Playhead) -> Task<Message> {
+        self.playhead = playhead;
+        self.screen.invalidate();
+
+        match playhead {
+            timeline::Playhead::Live => self.go_live(),
+            timeline::Playhead::Paused(index) => self.rewind(index),
+        }
+    }
+
+    fn rewind(&mut self, playhead: timeline::Index) -> Task<Message> {
+        let State::Working {
+            connection: Connection::Connected { client, .. },
+            ..
+        } = &self.state
+        else {
+            return Task::none();
+        };
+
+        let message = self
+            .timeline
+            .seek(playhead)
+            .filter_map(|event| {
+                if let beacon::Event::SpanFinished {
+                    span: beacon::Span::Update { number, .. },
+                    ..
+                } = event
+                {
+                    Some(number)
+                } else {
+                    None
+                }
+            })
+            .next();
+
+        if let Some(message) = message {
+            Task::future(client.rewind_to(*message)).discard()
+        } else {
+            Task::none()
+        }
+    }
+
+    fn go_live(&mut self) -> Task<Message> {
+        let State::Working {
+            connection: Connection::Connected { client, .. },
+            ..
+        } = &self.state
+        else {
+            return Task::none();
+        };
+
+        Task::future(client.go_live()).discard()
     }
 
     fn view(&self) -> Element<Message> {
@@ -336,15 +392,15 @@ impl Comet {
                 };
 
                 let screen = match &self.screen {
-                    Screen::Overview(overview) => {
-                        overview.view(&self.timeline, self.playhead, self.bar_width)
-                    }
-                    Screen::Update(update) => {
-                        update.view(&self.timeline, self.playhead, self.bar_width)
-                    }
-                    Screen::Present(present) => {
-                        present.view(&self.timeline, self.playhead, self.bar_width)
-                    }
+                    Screen::Overview(overview) => overview
+                        .view(&self.timeline, self.playhead, self.bar_width)
+                        .map(Message::Chart),
+                    Screen::Update(update) => update
+                        .view(&self.timeline, self.playhead, self.bar_width)
+                        .map(Message::Chart),
+                    Screen::Present(present) => present
+                        .view(&self.timeline, self.playhead, self.bar_width)
+                        .map(Message::Chart),
                     Screen::Custom(custom) => custom
                         .view(&self.timeline, self.playhead, self.bar_width)
                         .map(Message::Custom),

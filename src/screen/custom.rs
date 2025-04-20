@@ -1,4 +1,4 @@
-use crate::beacon::Event;
+use crate::beacon;
 use crate::beacon::span;
 use crate::chart;
 use crate::timeline::{self, Timeline};
@@ -17,6 +17,12 @@ pub struct Custom {
 #[derive(Debug, Clone)]
 pub enum Message {
     Browse(Link),
+    Chart(chart::Interaction),
+}
+
+#[derive(Debug, Clone)]
+pub enum Event {
+    ChartInteracted(chart::Interaction),
 }
 
 #[derive(Debug, Clone)]
@@ -31,7 +37,7 @@ impl Custom {
         let timings = timeline
             .seek(playhead)
             .filter_map(|event| {
-                if let Event::SpanFinished {
+                if let beacon::Event::SpanFinished {
                     span: span::Span::Custom { name },
                     ..
                 } = event
@@ -52,22 +58,22 @@ impl Custom {
         }
     }
 
-    pub fn invalidate_by(&mut self, event: &Event) {
+    pub fn invalidate_by(&mut self, event: &beacon::Event) {
         match event {
-            Event::SpanFinished {
+            beacon::Event::SpanFinished {
                 span: span::Span::Custom { name },
                 ..
             } => {
                 self.timings.entry(name.to_owned()).or_default().clear();
             }
-            Event::ThemeChanged { .. } => {
+            beacon::Event::ThemeChanged { .. } => {
                 self.invalidate();
             }
             _ => {}
         }
     }
 
-    pub fn update(&mut self, message: Message) {
+    pub fn update(&mut self, message: Message) -> Option<Event> {
         match message {
             Message::Browse(link) => {
                 let path = match link {
@@ -85,7 +91,10 @@ impl Custom {
                 };
 
                 let _ = open::that_in_background(format!("{docs_host}{path}"));
+
+                None
             }
+            Message::Chart(interaction) => Some(Event::ChartInteracted(interaction)),
         }
     }
 
@@ -137,7 +146,8 @@ impl Custom {
                     cache,
                     &chart::Stage::Custom(name.to_owned()), // TODO: Avoid allocation (?)
                     bar_width,
-                ),
+                )
+                .map(Message::Chart),
             )
         });
 

@@ -88,12 +88,12 @@ impl Present {
         }
     }
 
-    pub fn view<'a, Message: 'a>(
+    pub fn view<'a>(
         &'a self,
         timeline: &'a Timeline,
         playhead: timeline::Playhead,
         bar_width: chart::BarWidth,
-    ) -> Element<'a, Message> {
+    ) -> Element<'a, chart::Interaction> {
         let primitives = [
             Some((span::Primitive::Quad, &self.quad)),
             self.triangle

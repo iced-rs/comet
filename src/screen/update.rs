@@ -47,19 +47,20 @@ impl Update {
         }
     }
 
-    pub fn view<'a, Message: 'a>(
+    pub fn view<'a>(
         &'a self,
         timeline: &'a Timeline,
         playhead: timeline::Playhead,
         bar_width: chart::BarWidth,
-    ) -> Element<'a, Message> {
-        let update = chart::performance(
+    ) -> Element<'a, chart::Interaction> {
+        let update = chart::updates(
             timeline,
             playhead,
             &self.update,
             &chart::Stage::Update,
             bar_width,
         );
+
         let tasks_spawned =
             chart::tasks_spawned(timeline, playhead, &self.tasks_spawned, bar_width);
         let subscriptions_alive =

@@ -55,9 +55,12 @@ impl Timeline {
 
     pub fn seek(
         &self,
-        playhead: Playhead,
-    ) -> impl DoubleEndedIterator<Item = &beacon::Event> + Clone + '_ {
-        let index = self.index(playhead);
+        playhead: impl Into<Playhead>,
+    ) -> impl DoubleEndedIterator<Item = &beacon::Event>
+    + ExactSizeIterator<Item = &beacon::Event>
+    + Clone
+    + '_ {
+        let index = self.index(playhead.into());
 
         self.events
             .iter()
@@ -65,22 +68,39 @@ impl Timeline {
             .skip(self.events.len().saturating_sub(index.0))
     }
 
+    pub fn seek_with_index(
+        &self,
+        playhead: impl Into<Playhead>,
+    ) -> impl DoubleEndedIterator<Item = (Index, &beacon::Event)>
+    + ExactSizeIterator<Item = (Index, &beacon::Event)>
+    + Clone
+    + '_ {
+        let playhead = playhead.into();
+        let index = self.index(playhead);
+
+        self.seek(playhead)
+            .enumerate()
+            .map(move |(i, event)| (index - i as u32, event))
+    }
+
     pub fn timeframes(
         &self,
         playhead: Playhead,
         stage: chart::Stage,
     ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + '_ {
-        self.seek(playhead).filter_map(move |event| match event {
-            beacon::Event::SpanFinished { at, duration, span }
-                if chart::Stage::from(span.stage()) == stage =>
-            {
-                Some(Timeframe {
-                    at: *at,
-                    duration: *duration,
-                })
-            }
-            _ => None,
-        })
+        self.seek_with_index(playhead)
+            .filter_map(move |(index, event)| match event {
+                beacon::Event::SpanFinished { at, duration, span }
+                    if chart::Stage::from(span.stage()) == stage =>
+                {
+                    Some(Timeframe {
+                        index,
+                        at: *at,
+                        duration: *duration,
+                    })
+                }
+                _ => None,
+            })
     }
 
     pub fn time_at(&self, playhead: Playhead) -> Option<SystemTime> {
@@ -97,6 +117,12 @@ pub enum Playhead {
 impl Playhead {
     pub fn is_live(self) -> bool {
         matches!(self, Self::Live)
+    }
+}
+
+impl From<Index> for Playhead {
+    fn from(index: Index) -> Self {
+        Self::Paused(index)
     }
 }
 
@@ -143,6 +169,7 @@ impl Sub<u32> for Index {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timeframe {
+    pub index: Index,
     pub at: SystemTime,
     pub duration: Duration,
 }

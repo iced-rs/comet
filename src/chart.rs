@@ -5,6 +5,7 @@ use crate::timeline::{self, Timeline};
 use iced::mouse;
 use iced::time::SystemTime;
 use iced::widget::canvas;
+use iced::window;
 use iced::{
     Bottom, Center, Color, Element, Event, Fill, Font, Pixels, Point, Rectangle, Renderer, Right,
     Size, Theme, Top,
@@ -13,6 +14,12 @@ use iced::{
 use std::fmt;
 
 pub use canvas::Cache;
+
+#[derive(Debug, Clone)]
+pub enum Interaction {
+    Hovered(timeline::Index),
+    Unhovered,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Stage {
@@ -93,20 +100,17 @@ impl Default for BarWidth {
     }
 }
 
-pub fn performance<'a, Message>(
+pub fn performance<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
     stage: &Stage,
     bar_width: BarWidth,
-) -> Element<'a, Message>
-where
-    Message: 'a,
-{
+) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
             .timeframes(playhead, stage.clone())
-            .map(|timeframe| timeframe.duration),
+            .map(|timeframe| (timeframe.index, timeframe.duration)),
         cache,
         to_float: |duration| duration.as_secs_f64(),
         to_string: |duration| format!("{duration:?}"),
@@ -120,25 +124,49 @@ where
     .into()
 }
 
-pub fn tasks_spawned<'a, Message>(
+pub fn updates<'a>(
+    timeline: &'a Timeline,
+    playhead: timeline::Playhead,
+    cache: &'a canvas::Cache,
+    stage: &Stage,
+    bar_width: BarWidth,
+) -> Element<'a, Interaction> {
+    canvas(BarChart {
+        datapoints: timeline
+            .timeframes(playhead, stage.clone())
+            .map(|timeframe| (timeframe.index, timeframe.duration)),
+        cache,
+        to_float: |duration| duration.as_secs_f64(),
+        to_string: |duration| format!("{duration:?}"),
+        average: |duration, n| duration / n,
+        average_to_float: |duration| duration.as_secs_f64(),
+        average_to_string: |duration| format!("{duration:?}"),
+        bar_width,
+    })
+    .width(Fill)
+    .height(Fill)
+    .into()
+}
+
+pub fn tasks_spawned<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
     bar_width: BarWidth,
-) -> Element<'a, Message>
-where
-    Message: 'a,
-{
+) -> Element<'a, Interaction> {
     canvas(BarChart {
-        datapoints: timeline.seek(playhead).filter_map(|event| match event {
-            beacon::Event::SpanFinished {
-                span: Span::Update {
-                    commands_spawned, ..
-                },
-                ..
-            } => Some(*commands_spawned),
-            _ => None,
-        }),
+        datapoints: timeline
+            .seek_with_index(playhead)
+            .filter_map(|(index, event)| match event {
+                beacon::Event::SpanFinished {
+                    span:
+                        Span::Update {
+                            commands_spawned, ..
+                        },
+                    ..
+                } => Some((index, *commands_spawned)),
+                _ => None,
+            }),
         cache,
         to_float: |amount| amount as f64,
         to_string: |amount| amount.to_string(),
@@ -152,20 +180,21 @@ where
     .into()
 }
 
-pub fn subscriptions_alive<'a, Message>(
+pub fn subscriptions_alive<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
     bar_width: BarWidth,
-) -> Element<'a, Message>
-where
-    Message: 'a,
-{
+) -> Element<'a, Interaction> {
     canvas(BarChart {
-        datapoints: timeline.seek(playhead).filter_map(|event| match event {
-            beacon::Event::SubscriptionsTracked { amount_alive, .. } => Some(*amount_alive),
-            _ => None,
-        }),
+        datapoints: timeline
+            .seek_with_index(playhead)
+            .filter_map(|(index, event)| match event {
+                beacon::Event::SubscriptionsTracked { amount_alive, .. } => {
+                    Some((index, *amount_alive))
+                }
+                _ => None,
+            }),
         cache,
         to_float: |amount| amount as f64,
         to_string: |amount| amount.to_string(),
@@ -179,51 +208,58 @@ where
     .into()
 }
 
-pub fn message_rate<'a, Message>(
+pub fn message_rate<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
     bar_width: BarWidth,
-) -> Element<'a, Message>
-where
-    Message: 'a,
-{
+) -> Element<'a, Interaction> {
     let updates_per_second = {
-        let mut updates = timeline.seek(playhead).filter_map(|event| match event {
-            beacon::Event::SpanFinished { at, span, .. } if span.stage() == span::Stage::Update => {
-                Some(*at)
-            }
-            _ => None,
-        });
+        let mut updates =
+            timeline
+                .seek_with_index(playhead)
+                .filter_map(|(index, event)| match event {
+                    beacon::Event::SpanFinished { at, span, .. }
+                        if span.stage() == span::Stage::Update =>
+                    {
+                        Some((index, *at))
+                    }
+                    _ => None,
+                });
 
         let mut current_bucket = 1;
-        let mut current_second = updates.next().map(|time| {
-            time.duration_since(SystemTime::UNIX_EPOCH)
-                .ok()
-                .unwrap_or_default()
-                .as_secs()
+        let mut current_second = updates.next().map(|(index, time)| {
+            (
+                index,
+                time.duration_since(SystemTime::UNIX_EPOCH)
+                    .ok()
+                    .unwrap_or_default()
+                    .as_secs(),
+            )
         });
 
         std::iter::from_fn(move || {
-            for time in updates.by_ref() {
+            for (index, time) in updates.by_ref() {
                 let second = time
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_secs();
 
-                if Some(second) != current_second {
+                if current_second.is_none_or(|(_i, current_second)| current_second != second) {
                     let bucket = current_bucket;
 
-                    current_second = Some(second);
+                    current_second = Some((index, second));
                     current_bucket = 1;
 
-                    return Some(bucket);
+                    return Some((index, bucket));
                 }
 
                 current_bucket += 1;
             }
 
-            current_second.take().is_some().then_some(current_bucket)
+            current_second
+                .take()
+                .map(|(index, _)| (index, current_bucket))
         })
     };
 
@@ -244,7 +280,7 @@ where
 
 struct BarChart<'a, I, T, A>
 where
-    I: Iterator<Item = T>,
+    I: Iterator<Item = (timeline::Index, T)>,
 {
     datapoints: I,
     cache: &'a canvas::Cache,
@@ -256,26 +292,50 @@ where
     bar_width: BarWidth,
 }
 
-impl<'a, Message, I, T, A> canvas::Program<Message> for BarChart<'a, I, T, A>
+impl<'a, I, T, A> canvas::Program<Interaction> for BarChart<'a, I, T, A>
 where
-    I: Iterator<Item = T> + Clone + 'a,
+    I: Iterator<Item = (timeline::Index, T)> + Clone + 'a,
     T: Ord + Copy + std::iter::Sum,
     A: Copy,
 {
-    type State = ();
+    type State = Option<timeline::Index>;
 
     fn update(
         &self,
-        _state: &mut Self::State,
+        bar_hovered: &mut Option<timeline::Index>,
         event: &Event,
         bounds: Rectangle,
         cursor: mouse::Cursor,
-    ) -> Option<canvas::Action<Message>> {
+    ) -> Option<canvas::Action<Interaction>> {
         match event {
-            Event::Mouse(mouse::Event::CursorMoved { .. }) if cursor.is_over(bounds) => {
+            Event::Mouse(mouse::Event::CursorMoved { .. })
+            | Event::Window(window::Event::RedrawRequested(_)) => {
+                let Some(position) = cursor.position_in(bounds) else {
+                    if bar_hovered.is_some() {
+                        *bar_hovered = None;
+
+                        return Some(canvas::Action::publish(Interaction::Unhovered));
+                    } else {
+                        return None;
+                    }
+                };
+
+                let bar = ((bounds.width - position.x) / self.bar_width.0 as f32) as usize;
+
+                let (index, _datapoint) = self
+                    .datapoints
+                    .clone()
+                    .nth(bar)
+                    .or_else(|| self.datapoints.clone().last())?;
+
+                if Some(index) == *bar_hovered {
+                    return None;
+                }
+
+                *bar_hovered = Some(index);
                 self.cache.clear();
 
-                Some(canvas::Action::request_redraw())
+                Some(canvas::Action::publish(Interaction::Hovered(index)))
             }
             _ => None,
         }
@@ -298,15 +358,16 @@ where
             let bar_width = f32::from(self.bar_width.0);
             let amount = (bounds.width / bar_width).ceil() as usize;
 
-            let Some(max) = self.datapoints.clone().take(amount).max() else {
+            let datapoints = self.datapoints.clone().map(|(_i, datapoint)| datapoint);
+
+            let Some(max) = datapoints.clone().take(amount).max() else {
                 return;
             };
 
             let average = {
                 let mut n = 0;
 
-                let sum = self
-                    .datapoints
+                let sum = datapoints
                     .clone()
                     .take(amount * 3)
                     .inspect(|_datapoint| {
@@ -325,7 +386,7 @@ where
 
             let pixels_per_unit = average_pixels.min(max_pixels);
 
-            for (i, datapoint) in self.datapoints.clone().take(amount).enumerate() {
+            for (i, datapoint) in datapoints.take(amount).enumerate() {
                 let value = (self.to_float)(datapoint);
                 let bar_height = (value * pixels_per_unit) as f32;
 

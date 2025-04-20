@@ -64,12 +64,12 @@ impl Overview {
         }
     }
 
-    pub fn view<'a, Message: 'a>(
+    pub fn view<'a>(
         &'a self,
         timeline: &'a Timeline,
         playhead: timeline::Playhead,
         bar_width: chart::BarWidth,
-    ) -> Element<'a, Message> {
+    ) -> Element<'a, chart::Interaction> {
         let update = (&chart::Stage::Update, &self.update);
         let view = (&chart::Stage::View, &self.view);
         let layout = (&chart::Stage::Layout, &self.layout);
