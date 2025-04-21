@@ -1,4 +1,5 @@
 use crate::beacon;
+use crate::beacon::span;
 use crate::chart;
 use crate::core::time::{Duration, SystemTime};
 
@@ -8,6 +9,9 @@ use std::ops::{Add, RangeInclusive, Sub};
 #[derive(Debug, Clone, Default)]
 pub struct Timeline {
     events: VecDeque<beacon::Event>,
+    updates: VecDeque<Update>,
+    update_rate: VecDeque<Bucket>,
+    removed: usize,
 }
 
 impl Timeline {
@@ -27,25 +31,86 @@ impl Timeline {
     }
 
     pub fn range(&self) -> RangeInclusive<Index> {
-        Index(0)..=self.end()
+        Index(self.removed)..=self.end()
     }
 
     pub fn end(&self) -> Index {
-        Index(self.events.len())
+        Index(self.events.len() + self.removed)
     }
 
     pub fn index(&self, playhead: Playhead) -> Index {
         match playhead {
-            Playhead::Live => Index(self.events.len()),
+            Playhead::Live => self.end(),
             Playhead::Paused(index) => index,
         }
     }
 
     pub fn push(&mut self, event: beacon::Event) {
+        if let beacon::Event::SpanFinished {
+            span:
+                span::Span::Update {
+                    number,
+                    tasks,
+                    subscriptions,
+                    ref message,
+                    ..
+                },
+            at,
+            duration,
+            ..
+        } = event
+        {
+            self.updates.push_back(Update {
+                index: self.end(),
+                message: message.clone(),
+                duration,
+                number,
+                tasks,
+                subscriptions,
+            });
+
+            let second = at
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+
+            match self.update_rate.back_mut() {
+                Some(update_rate) if update_rate.second == second => {
+                    update_rate.at = at;
+                    update_rate.total += 1;
+                }
+                _ => {
+                    self.update_rate.push_back(Bucket {
+                        index: self.end(),
+                        at,
+                        second,
+                        total: 1,
+                    });
+                }
+            }
+        }
+
         self.events.push_back(event);
 
         if self.events.len() > Self::MAX_SIZE {
-            self.events.pop_front();
+            if let Some(beacon::Event::SpanFinished {
+                span: span::Span::Update { .. },
+                at,
+                ..
+            }) = self.events.pop_front()
+            {
+                self.updates.pop_front();
+
+                if self
+                    .update_rate
+                    .front()
+                    .is_some_and(|bucket| bucket.at < at)
+                {
+                    self.update_rate.pop_front();
+                }
+            }
+
+            self.removed += 1;
         }
     }
 
@@ -60,12 +125,9 @@ impl Timeline {
     + ExactSizeIterator<Item = &beacon::Event>
     + Clone
     + '_ {
-        let index = self.index(playhead.into());
+        let index = self.index(playhead.into()) - self.removed;
 
-        self.events
-            .iter()
-            .rev()
-            .skip(self.events.len().saturating_sub(index.0))
+        self.events.range(0..index.0).rev()
     }
 
     pub fn seek_with_index(
@@ -76,11 +138,11 @@ impl Timeline {
     + Clone
     + '_ {
         let playhead = playhead.into();
-        let index = self.index(playhead);
+        let index = self.index(playhead) - self.removed;
 
         self.seek(playhead)
             .enumerate()
-            .map(move |(i, event)| (index - i as u32, event))
+            .map(move |(i, event)| (index - i, event))
     }
 
     pub fn timeframes(
@@ -101,6 +163,38 @@ impl Timeline {
                 }
                 _ => None,
             })
+    }
+
+    pub fn updates(
+        &self,
+        playhead: impl Into<Playhead>,
+    ) -> impl DoubleEndedIterator<Item = Update> + Clone + '_ {
+        let index = self.index(playhead.into());
+
+        let start = match self
+            .updates
+            .binary_search_by(|update| update.index.cmp(&index))
+        {
+            Ok(i) | Err(i) => i,
+        };
+
+        self.updates.range(0..start).cloned().rev()
+    }
+
+    pub fn update_rate(
+        &self,
+        playhead: impl Into<Playhead>,
+    ) -> impl DoubleEndedIterator<Item = Bucket> + Clone + '_ {
+        let index = self.index(playhead.into());
+
+        let start = match self
+            .update_rate
+            .binary_search_by(|update| update.index.cmp(&index))
+        {
+            Ok(i) | Err(i) => i,
+        };
+
+        self.update_rate.range(0..start).cloned().rev()
     }
 
     pub fn time_at(&self, playhead: Playhead) -> Option<SystemTime> {
@@ -151,19 +245,19 @@ impl num_traits::FromPrimitive for Index {
     }
 }
 
-impl Add<u32> for Index {
+impl Add<usize> for Index {
     type Output = Self;
 
-    fn add(self, rhs: u32) -> Self::Output {
-        Self(self.0 + rhs as usize)
+    fn add(self, rhs: usize) -> Self::Output {
+        Self(self.0 + rhs)
     }
 }
 
-impl Sub<u32> for Index {
+impl Sub<usize> for Index {
     type Output = Self;
 
-    fn sub(self, rhs: u32) -> Self::Output {
-        Self(self.0.saturating_sub(rhs as usize))
+    fn sub(self, rhs: usize) -> Self::Output {
+        Self(self.0.saturating_sub(rhs))
     }
 }
 
@@ -172,4 +266,22 @@ pub struct Timeframe {
     pub index: Index,
     pub at: SystemTime,
     pub duration: Duration,
+}
+
+#[derive(Debug, Clone)]
+pub struct Update {
+    pub index: Index,
+    pub duration: Duration,
+    pub number: usize,
+    pub tasks: usize,
+    pub subscriptions: usize,
+    pub message: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Bucket {
+    pub index: Index,
+    pub at: SystemTime,
+    pub second: u64,
+    pub total: usize,
 }

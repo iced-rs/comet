@@ -148,8 +148,7 @@ impl Comet {
                             self.theme = Theme::custom(name.clone(), palette);
                         }
                     }
-                    beacon::Event::SpanFinished { .. }
-                    | beacon::Event::SubscriptionsTracked { .. } => {}
+                    beacon::Event::SpanFinished { .. } => {}
                     beacon::Event::QuitRequested { .. } | beacon::Event::AlreadyRunning { .. } => {
                         return iced::exit();
                     }
@@ -267,24 +266,10 @@ impl Comet {
             return Task::none();
         };
 
-        let message = self
-            .timeline
-            .seek(playhead)
-            .filter_map(|event| {
-                if let beacon::Event::SpanFinished {
-                    span: beacon::Span::Update { number, .. },
-                    ..
-                } = event
-                {
-                    Some(number)
-                } else {
-                    None
-                }
-            })
-            .next();
+        let update = self.timeline.updates(playhead).next();
 
-        if let Some(message) = message {
-            Task::future(client.rewind_to(*message)).discard()
+        if let Some(update) = update {
+            Task::future(client.rewind_to(update.number)).discard()
         } else {
             Task::none()
         }

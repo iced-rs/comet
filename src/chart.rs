@@ -1,9 +1,7 @@
-use crate::beacon;
-use crate::beacon::span::{self, Span};
+use crate::beacon::span;
 use crate::timeline::{self, Timeline};
 
 use iced::mouse;
-use iced::time::SystemTime;
 use iced::widget::canvas;
 use iced::window;
 use iced::{
@@ -108,34 +106,36 @@ pub fn performance<'a>(
     stage: &Stage,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
-    canvas(BarChart {
-        datapoints: timeline
-            .timeframes(playhead, stage.clone())
-            .map(|timeframe| (timeframe.index, timeframe.duration)),
-        cache,
-        to_float: |duration| duration.as_secs_f64(),
-        to_string: |duration| format!("{duration:?}"),
-        average: |duration, n| duration / n,
-        average_to_float: |duration| duration.as_secs_f64(),
-        average_to_string: |duration| format!("{duration:?}"),
-        zoom,
-    })
-    .width(Fill)
-    .height(Fill)
-    .into()
+    match stage {
+        Stage::Update => updates(timeline, playhead, cache, zoom),
+        _ => canvas(BarChart {
+            datapoints: timeline
+                .timeframes(playhead, stage.clone())
+                .map(|timeframe| (timeframe.index, timeframe.duration)),
+            cache,
+            to_float: |duration| duration.as_secs_f64(),
+            to_string: |duration| format!("{duration:?}"),
+            average: |duration, n| duration / n,
+            average_to_float: |duration| duration.as_secs_f64(),
+            average_to_string: |duration| format!("{duration:?}"),
+            zoom,
+        })
+        .width(Fill)
+        .height(Fill)
+        .into(),
+    }
 }
 
 pub fn updates<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
-    stage: &Stage,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
-            .timeframes(playhead, stage.clone())
-            .map(|timeframe| (timeframe.index, timeframe.duration)),
+            .updates(playhead)
+            .map(|update| (update.index, update.duration)),
         cache,
         to_float: |duration| duration.as_secs_f64(),
         to_string: |duration| format!("{duration:?}"),
@@ -157,17 +157,8 @@ pub fn tasks_spawned<'a>(
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
-            .seek_with_index(playhead)
-            .filter_map(|(index, event)| match event {
-                beacon::Event::SpanFinished {
-                    span:
-                        Span::Update {
-                            commands_spawned, ..
-                        },
-                    ..
-                } => Some((index, *commands_spawned)),
-                _ => None,
-            }),
+            .updates(playhead)
+            .map(|update| (update.index, update.tasks)),
         cache,
         to_float: |amount| amount as f64,
         to_string: |amount| amount.to_string(),
@@ -189,13 +180,8 @@ pub fn subscriptions_alive<'a>(
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
-            .seek_with_index(playhead)
-            .filter_map(|(index, event)| match event {
-                beacon::Event::SubscriptionsTracked { amount_alive, .. } => {
-                    Some((index, *amount_alive))
-                }
-                _ => None,
-            }),
+            .updates(playhead)
+            .map(|update| (update.index, update.subscriptions)),
         cache,
         to_float: |amount| amount as f64,
         to_string: |amount| amount.to_string(),
@@ -215,54 +201,9 @@ pub fn message_rate<'a>(
     cache: &'a canvas::Cache,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
-    let updates_per_second = {
-        let mut updates =
-            timeline
-                .seek_with_index(playhead)
-                .filter_map(|(index, event)| match event {
-                    beacon::Event::SpanFinished { at, span, .. }
-                        if span.stage() == span::Stage::Update =>
-                    {
-                        Some((index, *at))
-                    }
-                    _ => None,
-                });
-
-        let mut current_bucket = 1;
-        let mut current_second = updates.next().map(|(index, time)| {
-            (
-                index,
-                time.duration_since(SystemTime::UNIX_EPOCH)
-                    .ok()
-                    .unwrap_or_default()
-                    .as_secs(),
-            )
-        });
-
-        std::iter::from_fn(move || {
-            for (index, time) in updates.by_ref() {
-                let second = time
-                    .duration_since(SystemTime::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs();
-
-                if current_second.is_none_or(|(_i, current_second)| current_second != second) {
-                    let bucket = current_bucket;
-
-                    current_second = Some((index, second));
-                    current_bucket = 1;
-
-                    return Some((index, bucket));
-                }
-
-                current_bucket += 1;
-            }
-
-            current_second
-                .take()
-                .map(|(index, _)| (index, current_bucket))
-        })
-    };
+    let updates_per_second = timeline
+        .update_rate(playhead)
+        .map(|update| (update.index, update.total));
 
     canvas(BarChart {
         datapoints: updates_per_second,

@@ -29,9 +29,6 @@ impl Update {
 
     pub fn invalidate_by(&mut self, event: &Event) {
         match event {
-            Event::SubscriptionsTracked { .. } => {
-                self.subscriptions_alive.clear();
-            }
             Event::SpanFinished {
                 span: Span::Update { .. },
                 ..
@@ -39,6 +36,7 @@ impl Update {
                 self.update.clear();
                 self.tasks_spawned.clear();
                 self.message_rate.clear();
+                self.subscriptions_alive.clear();
             }
             Event::ThemeChanged { .. } => {
                 self.invalidate();
@@ -53,14 +51,7 @@ impl Update {
         playhead: timeline::Playhead,
         zoom: chart::Zoom,
     ) -> Element<'a, chart::Interaction> {
-        let update = chart::updates(
-            timeline,
-            playhead,
-            &self.update,
-            &chart::Stage::Update,
-            zoom,
-        );
-
+        let update = chart::updates(timeline, playhead, &self.update, zoom);
         let tasks_spawned = chart::tasks_spawned(timeline, playhead, &self.tasks_spawned, zoom);
         let subscriptions_alive =
             chart::subscriptions_alive(timeline, playhead, &self.subscriptions_alive, zoom);
@@ -70,14 +61,8 @@ impl Update {
             scrollable(
                 column({
                     let messages: Vec<_> = timeline
-                        .seek(playhead)
-                        .filter_map(|event| match event {
-                            Event::SpanFinished {
-                                span: Span::Update { message, .. },
-                                ..
-                            } => Some(message),
-                            _ => None,
-                        })
+                        .updates(playhead)
+                        .map(|update| update.message)
                         .take(20)
                         .map(|message| text(message).font(Font::MONOSPACE).size(10).into())
                         .collect();
