@@ -330,7 +330,12 @@ where
                     .or_else(|| self.datapoints.clone().last())?;
 
                 if Some(index) == *bar_hovered {
-                    return None;
+                    if matches!(event, Event::Mouse(mouse::Event::CursorMoved { .. })) {
+                        self.cache.clear();
+                        return Some(canvas::Action::request_redraw());
+                    } else {
+                        return None;
+                    }
                 }
 
                 *bar_hovered = Some(index);
@@ -427,11 +432,17 @@ where
                     },
                 );
 
+                let bar_overlay = Rectangle {
+                    y: 0.0,
+                    height: bounds.height,
+                    ..bar
+                };
+
                 match cursor {
-                    Some(cursor) if bar.contains(cursor) => {
+                    Some(cursor) if bar_overlay.contains(cursor) => {
                         frame.fill_rectangle(
-                            bar.position(),
-                            bar.size(),
+                            bar_overlay.position(),
+                            bar_overlay.size(),
                             Color::BLACK.scale_alpha(0.3),
                         );
 
