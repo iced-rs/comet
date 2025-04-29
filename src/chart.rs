@@ -1,3 +1,4 @@
+use crate::beacon;
 use crate::beacon::span;
 use crate::timeline::{self, Timeline};
 
@@ -182,6 +183,37 @@ pub fn subscriptions_alive<'a>(
         datapoints: timeline
             .updates(playhead)
             .map(|update| (update.index, update.subscriptions)),
+        cache,
+        to_float: |amount| amount as f64,
+        to_string: |amount| amount.to_string(),
+        average: |amount, n| amount as f64 / n as f64,
+        average_to_float: std::convert::identity,
+        average_to_string: |average| format!("{:.1}", average),
+        zoom,
+    })
+    .width(Fill)
+    .height(Fill)
+    .into()
+}
+
+pub fn layers_rendered<'a>(
+    timeline: &'a Timeline,
+    playhead: timeline::Playhead,
+    cache: &'a canvas::Cache,
+    zoom: Zoom,
+) -> Element<'a, Interaction> {
+    canvas(BarChart {
+        datapoints: timeline.seek_with_index(playhead).filter_map(|(i, event)| {
+            if let beacon::Event::SpanFinished {
+                span: span::Span::Present { layers, .. },
+                ..
+            } = event
+            {
+                Some((i, *layers))
+            } else {
+                None
+            }
+        }),
         cache,
         to_float: |amount| amount as f64,
         to_string: |amount| amount.to_string(),

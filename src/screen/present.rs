@@ -10,6 +10,7 @@ use iced::widget::{column, row};
 #[derive(Debug, Default)]
 pub struct Present {
     present: chart::Cache,
+    layers: chart::Cache,
     quad: Cache,
     triangle: Option<Cache>,
     shader: Option<Cache>,
@@ -24,6 +25,7 @@ impl Present {
 
     pub fn invalidate(&mut self) {
         self.present.clear();
+        self.layers.clear();
         self.quad.clear();
         self.text.clear();
 
@@ -45,6 +47,7 @@ impl Present {
             Event::SpanFinished { span, .. } => match span.stage() {
                 span::Stage::Present(_id) => {
                     self.present.clear();
+                    self.layers.clear();
                 }
                 span::Stage::Prepare(primitive) | span::Stage::Render(primitive) => {
                     let cache = match primitive {
@@ -127,16 +130,24 @@ impl Present {
             .into()
         });
 
-        let charts = [card(
-            "Present",
-            chart::performance(
-                timeline,
-                playhead,
-                &self.present,
-                &chart::Stage::Present,
-                zoom,
+        let charts = [row![
+            card(
+                "Present",
+                chart::performance(
+                    timeline,
+                    playhead,
+                    &self.present,
+                    &chart::Stage::Present,
+                    zoom,
+                ),
             ),
-        )]
+            card(
+                "Layers",
+                chart::layers_rendered(timeline, playhead, &self.layers, zoom),
+            ),
+        ]
+        .spacing(10)
+        .into()]
         .into_iter()
         .chain(primitives);
 
