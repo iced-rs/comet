@@ -22,7 +22,7 @@ open = "5.3"
 tracing-subscriber = "0.3"
 
 [build-dependencies]
-iced_fontello = "0.13"
+iced_fontello = "0.14.0-dev"
 
 [patch.crates-io]
 iced.git = "https://github.com/iced-rs/iced.git"

@@ -348,7 +348,6 @@ impl Comet {
                             "Time travel enabled",
                             tooltip::Position::Bottom,
                         )
-                        .into()
                     } else {
                         Element::from(horizontal_space())
                     };
