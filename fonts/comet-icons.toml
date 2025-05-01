@@ -1,0 +1,4 @@
+module = "icon"
+
+[glyphs]
+time_travel = "entypo-back-in-time"

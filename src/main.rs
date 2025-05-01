@@ -2,6 +2,7 @@ use iced_beacon as beacon;
 use iced_beacon::core;
 
 mod chart;
+mod icon;
 mod screen;
 mod timeline;
 mod widget;
@@ -9,7 +10,7 @@ mod widget;
 use crate::screen::Screen;
 use crate::screen::custom;
 use crate::timeline::Timeline;
-use crate::widget::{circle, diffused_text};
+use crate::widget::{circle, diffused_text, tip};
 
 use iced::border;
 use iced::keyboard;
@@ -33,6 +34,7 @@ pub fn main() -> iced::Result {
         .title(Comet::title)
         .subscription(Comet::subscription)
         .theme(Comet::theme)
+        .font(icon::FONT)
         .window(window::Settings {
             size: Size::new(800.0, 600.0),
             position: window::Position::SpecificWith(|window, monitor| {
@@ -59,6 +61,7 @@ enum State {
     Waiting,
     Working {
         name: String,
+        can_time_travel: bool,
         connection: Connection,
     },
 }
@@ -118,6 +121,8 @@ impl Comet {
                         connection,
                         name,
                         version,
+                        theme,
+                        can_time_travel,
                         ..
                     } => {
                         let current_name = match &self.state {
@@ -130,8 +135,13 @@ impl Comet {
                             self.timeline.clear();
                         }
 
+                        if let Some(palette) = theme {
+                            self.theme = Theme::custom(name.clone(), palette);
+                        }
+
                         self.state = State::Working {
                             name,
+                            can_time_travel,
                             connection: Connection::Connected {
                                 client: connection,
                                 version,
@@ -260,6 +270,7 @@ impl Comet {
     fn rewind(&mut self, playhead: timeline::Index) -> Task<Message> {
         let State::Working {
             connection: Connection::Connected { client, .. },
+            can_time_travel: true,
             ..
         } = &self.state
         else {
@@ -278,6 +289,7 @@ impl Comet {
     fn go_live(&mut self) -> Task<Message> {
         let State::Working {
             connection: Connection::Connected { client, .. },
+            can_time_travel: true,
             ..
         } = &self.state
         else {
@@ -301,7 +313,11 @@ impl Comet {
                 .align_y(Center),
             )
             .into(),
-            State::Working { name, connection } => {
+            State::Working {
+                name,
+                can_time_travel,
+                connection,
+            } => {
                 let header = {
                     let logo = row![
                         svg(self.logo.clone()).width(24).height(24),
@@ -322,6 +338,17 @@ impl Comet {
                             .font(Font::MONOSPACE)
                             .size(10)
                             .into()
+                    } else {
+                        Element::from(horizontal_space())
+                    };
+
+                    let time_travel = if *can_time_travel {
+                        tip(
+                            icon::time_travel().size(10),
+                            "Time travel enabled",
+                            tooltip::Position::Bottom,
+                        )
+                        .into()
                     } else {
                         Element::from(horizontal_space())
                     };
@@ -376,7 +403,7 @@ impl Comet {
                         .align_y(Center)
                     };
 
-                    row![logo, status, time, horizontal_space(), tabs]
+                    row![logo, status, time, time_travel, horizontal_space(), tabs]
                         .spacing(10)
                         .align_y(Center)
                         .height(Shrink)
@@ -398,24 +425,18 @@ impl Comet {
                 };
 
                 let timeline = {
-                    let counter = tooltip(
+                    let counter = tip(
                         progress_bar(
                             0.0..=self.timeline.capacity() as f32,
                             self.timeline.len() as f32,
                         )
                         .girth(10)
                         .length(20),
-                        container(
-                            text(format!(
-                                "Buffer capacity: {} / {}",
-                                self.timeline.len(),
-                                self.timeline.capacity(),
-                            ))
-                            .font(Font::MONOSPACE)
-                            .size(8),
-                        )
-                        .padding(5)
-                        .style(container::rounded_box),
+                        format!(
+                            "Buffer capacity: {} / {}",
+                            self.timeline.len(),
+                            self.timeline.capacity(),
+                        ),
                         tooltip::Position::Top,
                     );
 

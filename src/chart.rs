@@ -467,7 +467,7 @@ where
                 color: palette.background.base.text,
                 size: Pixels(10.0),
                 font: Font::MONOSPACE,
-                align_x: Right,
+                align_x: Right.into(),
                 ..canvas::Text::default()
             });
         });

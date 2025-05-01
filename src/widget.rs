@@ -1,7 +1,7 @@
 use iced::border;
 use iced::padding;
 use iced::theme::palette;
-use iced::widget::{column, container, horizontal_space, text};
+use iced::widget::{column, container, horizontal_space, text, tooltip};
 use iced::{Background, Color, Element, Font, Theme};
 
 pub use iced_palace::widget::diffused_text;
@@ -39,4 +39,19 @@ pub fn circle<'a, Message: 'a>(
             ..container::Style::default()
         })
         .into()
+}
+
+pub fn tip<'a, Message: 'a>(
+    content: impl Into<Element<'a, Message>>,
+    tip: impl text::IntoFragment<'a>,
+    position: tooltip::Position,
+) -> Element<'a, Message> {
+    tooltip(
+        content,
+        container(text(tip).font(Font::MONOSPACE).size(8))
+            .padding(5)
+            .style(container::rounded_box),
+        position,
+    )
+    .into()
 }
