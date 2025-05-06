@@ -1,5 +1,4 @@
-use crate::beacon::Event;
-use crate::beacon::span;
+use crate::beacon::{Event, Span};
 use crate::chart;
 use crate::timeline::{self, Timeline};
 use crate::widget::card;
@@ -33,29 +32,26 @@ impl Overview {
 
     pub fn invalidate_by(&mut self, event: &Event) {
         match event {
-            Event::SpanFinished { span, .. } => match span.stage() {
-                span::Stage::Update => {
+            Event::SpanFinished { span, .. } => match span {
+                Span::Update { .. } => {
                     self.update.clear();
                 }
-                span::Stage::View(_id) => {
+                Span::View { .. } => {
                     self.view.clear();
                 }
-                span::Stage::Layout(_id) => {
+                Span::Layout { .. } => {
                     self.layout.clear();
                 }
-                span::Stage::Interact(_id) => {
+                Span::Interact { .. } => {
                     self.interact.clear();
                 }
-                span::Stage::Draw(_id) => {
+                Span::Draw { .. } => {
                     self.draw.clear();
                 }
-                span::Stage::Present(_id) => {
+                Span::Present { .. } => {
                     self.present.clear();
                 }
-                span::Stage::Boot
-                | span::Stage::Prepare { .. }
-                | span::Stage::Render { .. }
-                | span::Stage::Custom(_) => {}
+                _ => {}
             },
             Event::ThemeChanged { .. } => {
                 self.invalidate();
@@ -70,16 +66,16 @@ impl Overview {
         playhead: timeline::Playhead,
         zoom: chart::Zoom,
     ) -> Element<'a, chart::Interaction> {
-        let update = (&chart::Stage::Update, &self.update);
-        let view = (&chart::Stage::View, &self.view);
-        let layout = (&chart::Stage::Layout, &self.layout);
-        let interact = (&chart::Stage::Interact, &self.interact);
-        let draw = (&chart::Stage::Draw, &self.draw);
-        let present = (&chart::Stage::Present, &self.present);
+        let update = (chart::Stage::Update, &self.update);
+        let view = (chart::Stage::View, &self.view);
+        let layout = (chart::Stage::Layout, &self.layout);
+        let interact = (chart::Stage::Interact, &self.interact);
+        let draw = (chart::Stage::Draw, &self.draw);
+        let present = (chart::Stage::Present, &self.present);
 
         column(
             [[update, view], [layout, interact], [draw, present]].map(|charts| {
-                row(charts.iter().map(|(stage, cache)| {
+                row(charts.into_iter().map(|(stage, cache)| {
                     card(
                         stage.to_string(),
                         chart::performance(timeline, playhead, cache, stage, zoom),

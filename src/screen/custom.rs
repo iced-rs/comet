@@ -144,7 +144,7 @@ impl Custom {
                     timeline,
                     playhead,
                     cache,
-                    &chart::Stage::Custom(name.to_owned()), // TODO: Avoid allocation (?)
+                    chart::Stage::Custom(name.to_owned()),
                     zoom,
                 )
                 .map(Message::Chart),

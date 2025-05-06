@@ -1,8 +1,10 @@
 use crate::beacon;
-use crate::beacon::span;
+use crate::beacon::span::present;
+use crate::beacon::span::{self, Span};
 use crate::timeline::{self, Timeline};
 
 use iced::mouse;
+use iced::time::Duration;
 use iced::widget::canvas;
 use iced::window;
 use iced::{
@@ -23,31 +25,52 @@ pub enum Interaction {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Stage {
-    Boot,
     Update,
     View,
     Layout,
     Interact,
     Draw,
     Present,
-    Prepare(span::Primitive),
-    Render(span::Primitive),
+    Prepare(present::Primitive),
+    Render(present::Primitive),
     Custom(String),
 }
 
-impl From<span::Stage> for Stage {
-    fn from(stage: span::Stage) -> Self {
-        match stage {
-            span::Stage::Boot => Stage::Boot,
-            span::Stage::Update => Stage::Update,
-            span::Stage::View(_id) => Stage::View,
-            span::Stage::Layout(_id) => Stage::Layout,
-            span::Stage::Interact(_id) => Stage::Interact,
-            span::Stage::Draw(_id) => Stage::Draw,
-            span::Stage::Present(_id) => Stage::Present,
-            span::Stage::Prepare(primitive) => Stage::Prepare(primitive),
-            span::Stage::Render(primitive) => Stage::Render(primitive),
-            span::Stage::Custom(name) => Stage::Custom(name),
+impl Stage {
+    pub fn duration(&self, event: &beacon::Event) -> Option<Duration> {
+        let beacon::Event::SpanFinished { duration, span, .. } = event else {
+            return None;
+        };
+
+        match (self, span) {
+            (Stage::Update, Span::Update { .. })
+            | (Stage::View, Span::View { .. })
+            | (Stage::Layout, Span::Layout { .. })
+            | (Stage::Interact, Span::Interact { .. })
+            | (Stage::Draw, Span::Draw { .. })
+            | (Stage::Present, Span::Present { .. }) => Some(*duration),
+            (
+                Stage::Prepare(primitive) | Stage::Render(primitive),
+                Span::Present {
+                    prepare, render, ..
+                },
+            ) => {
+                let stage = if matches!(self, Self::Prepare(_)) {
+                    prepare
+                } else {
+                    render
+                };
+
+                Some(match primitive {
+                    present::Primitive::Quad => stage.quads,
+                    present::Primitive::Triangle => stage.triangles,
+                    present::Primitive::Shader => stage.shaders,
+                    present::Primitive::Text => stage.text,
+                    present::Primitive::Image => stage.images,
+                })
+            }
+            (Stage::Custom(stage), Span::Custom { name }) if name == stage => Some(*duration),
+            _ => None,
         }
     }
 }
@@ -55,7 +78,6 @@ impl From<span::Stage> for Stage {
 impl fmt::Display for Stage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
-            Stage::Boot => "Boot",
             Stage::Update => "Update",
             Stage::View => "View",
             Stage::Layout => "Layout",
@@ -63,18 +85,18 @@ impl fmt::Display for Stage {
             Stage::Draw => "Draw",
             Stage::Present => "Present",
             Stage::Prepare(primitive) => match primitive {
-                span::Primitive::Quad => "Quad (prepare)",
-                span::Primitive::Triangle => "Triangle (prepare)",
-                span::Primitive::Shader => "Shader (prepare)",
-                span::Primitive::Image => "Image (prepare)",
-                span::Primitive::Text => "Text (prepare)",
+                present::Primitive::Quad => "Quad (prepare)",
+                present::Primitive::Triangle => "Triangle (prepare)",
+                present::Primitive::Shader => "Shader (prepare)",
+                present::Primitive::Image => "Image (prepare)",
+                present::Primitive::Text => "Text (prepare)",
             },
             Stage::Render(primitive) => match primitive {
-                span::Primitive::Quad => "Quad (render)",
-                span::Primitive::Triangle => "Triangle (render)",
-                span::Primitive::Shader => "Shader (render)",
-                span::Primitive::Image => "Image (render)",
-                span::Primitive::Text => "Text (render)",
+                present::Primitive::Quad => "Quad (render)",
+                present::Primitive::Triangle => "Triangle (render)",
+                present::Primitive::Shader => "Shader (render)",
+                present::Primitive::Image => "Image (render)",
+                present::Primitive::Text => "Text (render)",
             },
             Stage::Custom(name) => name,
         })
@@ -104,14 +126,14 @@ pub fn performance<'a>(
     timeline: &'a Timeline,
     playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
-    stage: &Stage,
+    stage: Stage,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
     match stage {
         Stage::Update => updates(timeline, playhead, cache, zoom),
         _ => canvas(BarChart {
             datapoints: timeline
-                .timeframes(playhead, stage.clone())
+                .timeframes(playhead, move |event| stage.duration(event))
                 .map(|timeframe| (timeframe.index, timeframe.duration)),
             cache,
             to_float: |duration| duration.as_secs_f64(),

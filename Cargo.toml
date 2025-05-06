@@ -26,13 +26,18 @@ iced_fontello = "0.14.0-dev"
 
 [patch.crates-io]
 iced.git = "https://github.com/iced-rs/iced.git"
-iced.rev = "e82b10da7785b23dcb245d52becc8a3364d2eb99"
+iced.rev = "833843542909da660532ea549315e09391f02906"
 
 iced_core.git = "https://github.com/iced-rs/iced.git"
-iced_core.rev = "e82b10da7785b23dcb245d52becc8a3364d2eb99"
+iced_core.rev = "833843542909da660532ea549315e09391f02906"
 
 iced_beacon.git = "https://github.com/iced-rs/iced.git"
-iced_beacon.rev = "e82b10da7785b23dcb245d52becc8a3364d2eb99"
+iced_beacon.rev = "833843542909da660532ea549315e09391f02906"
 
 iced_palace.git = "https://github.com/hecrj/iced_palace.git"
-iced_palace.rev = "3d92d30188a5027b60415bf5e262dcd0509291c6"
+iced_palace.rev = "14506bd5b97afe360603eaeb0da2611eab35f14c"
+
+# For development purposes:
+# iced.path = "../../iced"
+# iced_core.path = "../../iced/core"
+# iced_beacon.path = "../../iced/beacon"

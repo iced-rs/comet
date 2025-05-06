@@ -1,6 +1,5 @@
 use crate::beacon;
 use crate::beacon::span;
-use crate::chart;
 use crate::core::time::{Duration, SystemTime};
 
 use std::collections::VecDeque;
@@ -145,23 +144,16 @@ impl Timeline {
             .map(move |(i, event)| (index - i, event))
     }
 
-    pub fn timeframes(
-        &self,
+    pub fn timeframes<'a>(
+        &'a self,
         playhead: Playhead,
-        stage: chart::Stage,
-    ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + '_ {
+        to_duration: impl Fn(&beacon::Event) -> Option<Duration> + Clone + 'a,
+    ) -> impl DoubleEndedIterator<Item = Timeframe> + Clone + 'a {
         self.seek_with_index(playhead)
-            .filter_map(move |(index, event)| match event {
-                beacon::Event::SpanFinished { at, duration, span }
-                    if chart::Stage::from(span.stage()) == stage =>
-                {
-                    Some(Timeframe {
-                        index,
-                        at: *at,
-                        duration: *duration,
-                    })
-                }
-                _ => None,
+            .filter_map(move |(index, event)| {
+                let duration = to_duration(event)?;
+
+                Some(Timeframe { index, duration })
             })
     }
 
@@ -264,7 +256,6 @@ impl Sub<usize> for Index {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Timeframe {
     pub index: Index,
-    pub at: SystemTime,
     pub duration: Duration,
 }
 

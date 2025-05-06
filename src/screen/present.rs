@@ -1,5 +1,5 @@
-use crate::beacon::Event;
-use crate::beacon::span;
+use crate::beacon::span::present;
+use crate::beacon::{Event, Span};
 use crate::chart;
 use crate::timeline::{self, Timeline};
 use crate::widget::card;
@@ -44,46 +44,31 @@ impl Present {
 
     pub fn invalidate_by(&mut self, event: &Event) {
         match event {
-            Event::SpanFinished { span, .. } => match span.stage() {
-                span::Stage::Present(_id) => {
-                    self.present.clear();
-                    self.layers.clear();
+            Event::SpanFinished {
+                span: Span::Present { prepare, .. },
+                ..
+            } => {
+                self.present.clear();
+                self.layers.clear();
+
+                if self.triangle.is_none() && !prepare.triangles.is_zero() {
+                    self.triangle = Some(Cache::default());
                 }
-                span::Stage::Prepare(primitive) | span::Stage::Render(primitive) => {
-                    let cache = match primitive {
-                        span::Primitive::Quad => &mut self.quad,
-                        span::Primitive::Triangle => {
-                            if self.triangle.is_none() {
-                                self.triangle = Some(Cache::default());
-                            }
 
-                            self.triangle.as_mut().unwrap()
-                        }
-                        span::Primitive::Shader => {
-                            if self.shader.is_none() {
-                                self.shader = Some(Cache::default());
-                            }
-
-                            self.shader.as_mut().unwrap()
-                        }
-                        span::Primitive::Image => {
-                            if self.image.is_none() {
-                                self.image = Some(Cache::default());
-                            }
-
-                            self.image.as_mut().unwrap()
-                        }
-                        span::Primitive::Text => &mut self.text,
-                    };
-
-                    if matches!(span.stage(), span::Stage::Prepare(_)) {
-                        cache.prepare.clear();
-                    } else {
-                        cache.render.clear();
-                    }
+                if self.shader.is_none() && !prepare.shaders.is_zero() {
+                    self.shader = Some(Cache::default());
                 }
-                _ => {}
-            },
+
+                if self.image.is_none() && !prepare.images.is_zero() {
+                    self.image = Some(Cache::default());
+                }
+
+                self.quad.clear();
+                self.triangle.as_ref().map(Cache::clear);
+                self.shader.as_ref().map(Cache::clear);
+                self.image.as_ref().map(Cache::clear);
+                self.text.clear();
+            }
             Event::ThemeChanged { .. } => {
                 self.invalidate();
             }
@@ -98,17 +83,17 @@ impl Present {
         zoom: chart::Zoom,
     ) -> Element<'a, chart::Interaction> {
         let primitives = [
-            Some((span::Primitive::Quad, &self.quad)),
+            Some((present::Primitive::Quad, &self.quad)),
             self.triangle
                 .as_ref()
-                .map(|cache| (span::Primitive::Triangle, cache)),
+                .map(|cache| (present::Primitive::Triangle, cache)),
             self.shader
                 .as_ref()
-                .map(|cache| (span::Primitive::Shader, cache)),
+                .map(|cache| (present::Primitive::Shader, cache)),
             self.image
                 .as_ref()
-                .map(|cache| (span::Primitive::Image, cache)),
-            Some((span::Primitive::Text, &self.text)),
+                .map(|cache| (present::Primitive::Image, cache)),
+            Some((present::Primitive::Text, &self.text)),
         ]
         .into_iter()
         .flatten()
@@ -119,11 +104,11 @@ impl Present {
             row![
                 card(
                     prepare_stage.to_string(),
-                    chart::performance(timeline, playhead, &cache.prepare, &prepare_stage, zoom)
+                    chart::performance(timeline, playhead, &cache.prepare, prepare_stage, zoom)
                 ),
                 card(
                     render_stage.to_string(),
-                    chart::performance(timeline, playhead, &cache.render, &render_stage, zoom)
+                    chart::performance(timeline, playhead, &cache.render, render_stage, zoom)
                 ),
             ]
             .spacing(10)
@@ -137,7 +122,7 @@ impl Present {
                     timeline,
                     playhead,
                     &self.present,
-                    &chart::Stage::Present,
+                    chart::Stage::Present,
                     zoom,
                 ),
             ),
@@ -162,7 +147,7 @@ struct Cache {
 }
 
 impl Cache {
-    fn clear(&mut self) {
+    fn clear(&self) {
         self.prepare.clear();
         self.render.clear();
     }
