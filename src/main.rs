@@ -16,8 +16,8 @@ use iced::border;
 use iced::keyboard;
 use iced::time::SystemTime;
 use iced::widget::{
-    bottom, button, center, column, container, horizontal_rule, horizontal_space, progress_bar,
-    row, rule, slider, stack, svg, text, tooltip,
+    bottom, button, center, column, container, progress_bar, row, rule, slider, space, stack, svg,
+    text, tooltip,
 };
 use iced::window;
 use iced::{Center, Element, Font, Point, Shrink, Size, Subscription, Task, Theme};
@@ -299,7 +299,7 @@ impl Comet {
         Task::future(client.go_live()).discard()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         match &self.state {
             State::Waiting => center(
                 row![
@@ -339,7 +339,7 @@ impl Comet {
                             .size(10)
                             .into()
                     } else {
-                        Element::from(horizontal_space())
+                        Element::from(space::horizontal())
                     };
 
                     let time_travel = if *can_time_travel {
@@ -349,7 +349,7 @@ impl Comet {
                             tooltip::Position::Bottom,
                         )
                     } else {
-                        Element::from(horizontal_space())
+                        Element::from(space::horizontal())
                     };
 
                     let tabs = {
@@ -363,11 +363,13 @@ impl Comet {
                             if is_active {
                                 stack![
                                     container(label).padding([5, 10]),
-                                    bottom(horizontal_rule(2).style(|theme: &Theme| rule::Style {
-                                        color: theme.palette().text,
-                                        width: 2,
-                                        radius: border::Radius::default(),
-                                        fill_mode: rule::FillMode::Full,
+                                    bottom(rule::horizontal(2).style(|theme: &Theme| {
+                                        rule::Style {
+                                            color: theme.palette().text,
+                                            radius: border::Radius::default(),
+                                            fill_mode: rule::FillMode::Full,
+                                            snap: true,
+                                        }
                                     }))
                                 ]
                                 .into()
@@ -402,7 +404,7 @@ impl Comet {
                         .align_y(Center)
                     };
 
-                    row![logo, status, time, time_travel, horizontal_space(), tabs]
+                    row![logo, status, time, time_travel, space::horizontal(), tabs]
                         .spacing(10)
                         .align_y(Center)
                         .height(Shrink)
@@ -485,20 +487,28 @@ impl Comet {
     fn subscription(&self) -> Subscription<Message> {
         let beacon = Subscription::run(beacon::run).map(Message::EventReported);
 
-        let hotkeys = keyboard::on_key_press(|key, _| match key.as_ref() {
-            keyboard::Key::Named(keyboard::key::Named::F12) => Some(Message::Quit),
-            keyboard::Key::Named(keyboard::key::Named::Space) => Some(Message::TogglePause),
-            keyboard::Key::Named(keyboard::key::Named::ArrowLeft) => Some(Message::Previous),
-            keyboard::Key::Named(keyboard::key::Named::ArrowRight) => Some(Message::Next),
-            keyboard::Key::Character("o") => Some(Message::ShowOverview),
-            keyboard::Key::Character("u") => Some(Message::ShowUpdate),
-            keyboard::Key::Character("p") => Some(Message::ShowPresent),
-            keyboard::Key::Character("c") => Some(Message::ShowCustom),
-            keyboard::Key::Named(keyboard::key::Named::ArrowUp) => Some(Message::IncrementBarWidth),
-            keyboard::Key::Named(keyboard::key::Named::ArrowDown) => {
-                Some(Message::DecrementBarWidth)
+        let hotkeys = keyboard::listen().filter_map(|event| {
+            let keyboard::Event::KeyPressed { modified_key, .. } = event else {
+                return None;
+            };
+
+            match modified_key.as_ref() {
+                keyboard::Key::Named(keyboard::key::Named::F12) => Some(Message::Quit),
+                keyboard::Key::Named(keyboard::key::Named::Space) => Some(Message::TogglePause),
+                keyboard::Key::Named(keyboard::key::Named::ArrowLeft) => Some(Message::Previous),
+                keyboard::Key::Named(keyboard::key::Named::ArrowRight) => Some(Message::Next),
+                keyboard::Key::Character("o") => Some(Message::ShowOverview),
+                keyboard::Key::Character("u") => Some(Message::ShowUpdate),
+                keyboard::Key::Character("p") => Some(Message::ShowPresent),
+                keyboard::Key::Character("c") => Some(Message::ShowCustom),
+                keyboard::Key::Named(keyboard::key::Named::ArrowUp) => {
+                    Some(Message::IncrementBarWidth)
+                }
+                keyboard::Key::Named(keyboard::key::Named::ArrowDown) => {
+                    Some(Message::DecrementBarWidth)
+                }
+                _ => None,
             }
-            _ => None,
         });
 
         Subscription::batch([beacon, hotkeys])

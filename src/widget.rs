@@ -1,7 +1,7 @@
 use iced::border;
 use iced::padding;
 use iced::theme::palette;
-use iced::widget::{column, container, horizontal_space, text, tooltip};
+use iced::widget::{column, container, space, text, tooltip};
 use iced::{Background, Color, Element, Font, Theme};
 
 pub use iced_palace::widget::diffused_text;
@@ -30,7 +30,7 @@ pub fn card<'a, Message: 'a>(
 pub fn circle<'a, Message: 'a>(
     color: impl Fn(&palette::Extended) -> Color + 'a,
 ) -> Element<'a, Message> {
-    container(horizontal_space())
+    container(space())
         .width(8)
         .height(8)
         .style(move |theme: &Theme| container::Style {

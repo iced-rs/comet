@@ -26,18 +26,24 @@ iced_fontello = "0.14.0-dev"
 
 [patch.crates-io]
 iced.git = "https://github.com/iced-rs/iced.git"
-iced.rev = "833843542909da660532ea549315e09391f02906"
+iced.rev = "4cef837e459314a8e278366fc043754ee20173e7"
 
 iced_core.git = "https://github.com/iced-rs/iced.git"
-iced_core.rev = "833843542909da660532ea549315e09391f02906"
+iced_core.rev = "4cef837e459314a8e278366fc043754ee20173e7"
 
 iced_beacon.git = "https://github.com/iced-rs/iced.git"
-iced_beacon.rev = "833843542909da660532ea549315e09391f02906"
+iced_beacon.rev = "4cef837e459314a8e278366fc043754ee20173e7"
+
+iced_widget.git = "https://github.com/iced-rs/iced.git"
+iced_widget.rev = "4cef837e459314a8e278366fc043754ee20173e7"
 
 iced_palace.git = "https://github.com/hecrj/iced_palace.git"
-iced_palace.rev = "14506bd5b97afe360603eaeb0da2611eab35f14c"
+iced_palace.rev = "e4de01dc22b06e6a50bfb319018dcbf41e259e78"
 
 # For development purposes:
 # iced.path = "../../iced"
 # iced_core.path = "../../iced/core"
 # iced_beacon.path = "../../iced/beacon"
+
+[lints.clippy]
+large-enum-variant = "allow"
