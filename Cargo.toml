@@ -2,6 +2,10 @@
 name = "iced_comet"
 version = "0.14.0"
 edition = "2024"
+authors = ["Héctor Ramón Jiménez <hector@hecrj.dev>"]
+description = "Your favorite tool for inspecting and debugging iced applications. Built with iced!"
+license = "MIT"
+repository = "https://github.com/iced-rs/comet"
 
 [features]
 debug = ["iced/debug"]
