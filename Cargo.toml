@@ -1,19 +1,19 @@
 [package]
 name = "iced_comet"
-version = "0.14.0-dev"
+version = "0.14.0"
 edition = "2024"
 
 [features]
 debug = ["iced/debug"]
 
 [dependencies]
-iced.version = "0.14.0-dev"
+iced.version = "0.14"
 iced.features = ["tokio", "canvas", "svg"]
 
-iced_palace.version = "0.14.0-dev"
+iced_palace.version = "0.14"
 iced_palace.features = ["rand"]
 
-iced_beacon = "0.14.0-dev"
+iced_beacon = "0.14"
 
 chrono = "0.4"
 log = "0.4"
@@ -22,23 +22,23 @@ open = "5.3"
 tracing-subscriber = "0.3"
 
 [build-dependencies]
-iced_fontello = "0.14.0-dev"
+iced_fontello = "0.14"
 
-[patch.crates-io]
-iced.git = "https://github.com/iced-rs/iced.git"
-iced.rev = "4cef837e459314a8e278366fc043754ee20173e7"
+# [patch.crates-io]
+# iced.git = "https://github.com/iced-rs/iced.git"
+# iced.rev = "4cef837e459314a8e278366fc043754ee20173e7"
 
-iced_core.git = "https://github.com/iced-rs/iced.git"
-iced_core.rev = "4cef837e459314a8e278366fc043754ee20173e7"
+# iced_core.git = "https://github.com/iced-rs/iced.git"
+# iced_core.rev = "4cef837e459314a8e278366fc043754ee20173e7"
 
-iced_beacon.git = "https://github.com/iced-rs/iced.git"
-iced_beacon.rev = "4cef837e459314a8e278366fc043754ee20173e7"
+# iced_beacon.git = "https://github.com/iced-rs/iced.git"
+# iced_beacon.rev = "4cef837e459314a8e278366fc043754ee20173e7"
 
-iced_widget.git = "https://github.com/iced-rs/iced.git"
-iced_widget.rev = "4cef837e459314a8e278366fc043754ee20173e7"
+# iced_widget.git = "https://github.com/iced-rs/iced.git"
+# iced_widget.rev = "4cef837e459314a8e278366fc043754ee20173e7"
 
-iced_palace.git = "https://github.com/hecrj/iced_palace.git"
-iced_palace.rev = "e4de01dc22b06e6a50bfb319018dcbf41e259e78"
+# iced_palace.git = "https://github.com/hecrj/iced_palace.git"
+# iced_palace.rev = "e4de01dc22b06e6a50bfb319018dcbf41e259e78"
 
 # For development purposes:
 # iced.path = "../../iced"
