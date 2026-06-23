@@ -26,23 +26,26 @@ open = "5.3"
 tracing-subscriber = "0.3"
 
 [build-dependencies]
-iced_fontello = "0.14"
+iced_fontello = "0.15.0-dev"
 
 [patch.crates-io]
 iced.git = "https://github.com/iced-rs/iced.git"
-iced.rev = "c307bd7321fd04750a9b13f62779d1b7c6e757e2"
+iced.rev = "e46f9c9e69a8d787823c4a64fdcc49c23f303065"
 
 iced_core.git = "https://github.com/iced-rs/iced.git"
-iced_core.rev = "c307bd7321fd04750a9b13f62779d1b7c6e757e2"
+iced_core.rev = "e46f9c9e69a8d787823c4a64fdcc49c23f303065"
 
 iced_beacon.git = "https://github.com/iced-rs/iced.git"
-iced_beacon.rev = "c307bd7321fd04750a9b13f62779d1b7c6e757e2"
+iced_beacon.rev = "e46f9c9e69a8d787823c4a64fdcc49c23f303065"
 
 iced_widget.git = "https://github.com/iced-rs/iced.git"
-iced_widget.rev = "c307bd7321fd04750a9b13f62779d1b7c6e757e2"
+iced_widget.rev = "e46f9c9e69a8d787823c4a64fdcc49c23f303065"
 
 iced_palace.git = "https://github.com/hecrj/iced_palace.git"
-iced_palace.rev = "4cdf05a7e28792b37b2717d5869de7e3ffc31cdc"
+iced_palace.rev = "8001f0b8a61f5ee56e864f771cbecf7588ccb787"
+
+iced_fontello.git = "https://github.com/hecrj/iced_fontello.git"
+iced_fontello.rev = "2e6d61ee5a869443a249e7ee46a460665ce4969d"
 
 # For development purposes:
 # iced.path = "../../iced"

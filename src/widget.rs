@@ -1,6 +1,6 @@
 use iced::border;
 use iced::padding;
-use iced::theme::palette;
+use iced::theme;
 use iced::widget::{column, container, space, text, tooltip};
 use iced::{Background, Color, Element, Font, Theme};
 
@@ -20,7 +20,7 @@ pub fn card<'a, Message: 'a>(
         container::Style {
             border: border::rounded(border::top(5))
                 .width(1)
-                .color(theme.extended_palette().background.weak.color),
+                .color(theme.palette().background.weak.color),
             ..style
         }
     })
@@ -28,13 +28,13 @@ pub fn card<'a, Message: 'a>(
 }
 
 pub fn circle<'a, Message: 'a>(
-    color: impl Fn(&palette::Extended) -> Color + 'a,
+    color: impl Fn(&theme::Palette) -> Color + 'a,
 ) -> Element<'a, Message> {
     container(space())
         .width(8)
         .height(8)
         .style(move |theme: &Theme| container::Style {
-            background: Some(Background::from(color(theme.extended_palette()))),
+            background: Some(Background::from(color(theme.palette()))),
             border: border::rounded(4),
             ..container::Style::default()
         })

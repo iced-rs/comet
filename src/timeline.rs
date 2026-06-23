@@ -237,6 +237,12 @@ impl num_traits::FromPrimitive for Index {
     }
 }
 
+impl num_traits::AsPrimitive<f64> for Index {
+    fn as_(self) -> f64 {
+        self.0 as f64
+    }
+}
+
 impl Add<usize> for Index {
     type Output = Self;
 

@@ -371,7 +371,7 @@ where
             let cursor = cursor.position_in(bounds);
 
             let bounds = frame.size();
-            let palette = theme.extended_palette();
+            let palette = theme.palette();
 
             let bar_width = f32::from(self.zoom.0);
             let amount = (bounds.width / bar_width).ceil() as usize;

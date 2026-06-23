@@ -153,9 +153,9 @@ impl Comet {
                             *connection = Connection::Disconnected { at };
                         }
                     }
-                    beacon::Event::ThemeChanged { palette, .. } => {
+                    beacon::Event::ThemeChanged { seed, .. } => {
                         if let State::Working { name, .. } = &self.state {
-                            self.theme = Theme::custom(name.clone(), palette);
+                            self.theme = Theme::custom(name.clone(), seed);
                         }
                     }
                     beacon::Event::SpanFinished { .. } => {}
@@ -365,7 +365,7 @@ impl Comet {
                                     container(label).padding([5, 10]),
                                     bottom(rule::horizontal(2).style(|theme: &Theme| {
                                         rule::Style {
-                                            color: theme.palette().text,
+                                            color: theme.seed().text,
                                             radius: border::Radius::default(),
                                             fill_mode: rule::FillMode::Full,
                                             snap: true,
