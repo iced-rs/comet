@@ -19,6 +19,7 @@ pub use canvas::Cache;
 #[derive(Debug, Clone)]
 pub enum Interaction {
     Hovered(timeline::Index),
+    Selected(timeline::Index),
     Unhovered,
     ZoomChanged(Zoom),
 }
@@ -304,7 +305,7 @@ where
         cursor: mouse::Cursor,
     ) -> Option<canvas::Action<Interaction>> {
         match event {
-            Event::Mouse(mouse::Event::CursorMoved { .. })
+            Event::Mouse(mouse::Event::CursorMoved { .. } | mouse::Event::ButtonPressed(_))
             | Event::Window(window::Event::RedrawRequested(_)) => {
                 let Some(position) = cursor.position_in(bounds) else {
                     if bar_hovered.is_some() {
@@ -324,19 +325,23 @@ where
                     .nth(bar)
                     .or_else(|| self.datapoints.clone().last())?;
 
-                if Some(index) == *bar_hovered {
-                    if matches!(event, Event::Mouse(mouse::Event::CursorMoved { .. })) {
-                        self.cache.clear();
-                        return Some(canvas::Action::request_redraw());
-                    } else {
-                        return None;
-                    }
+                if *bar_hovered != Some(index) {
+                    *bar_hovered = Some(index);
+                    self.cache.clear();
+
+                    return Some(canvas::Action::publish(Interaction::Hovered(index)));
                 }
 
-                *bar_hovered = Some(index);
-                self.cache.clear();
+                let Event::Mouse(event) = event else {
+                    return None;
+                };
 
-                Some(canvas::Action::publish(Interaction::Hovered(index)))
+                match event {
+                    mouse::Event::ButtonPressed(mouse::Button::Left) => {
+                        Some(canvas::Action::publish(Interaction::Selected(index)))
+                    }
+                    _ => None,
+                }
             }
             Event::Mouse(mouse::Event::WheelScrolled { delta }) if cursor.is_over(bounds) => {
                 match delta {

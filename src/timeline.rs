@@ -137,7 +137,7 @@ impl Timeline {
     + Clone
     + '_ {
         let playhead = playhead.into();
-        let index = self.index(playhead) - self.removed;
+        let index = self.index(playhead + 1) - self.removed;
 
         self.seek(playhead)
             .enumerate()
@@ -161,7 +161,7 @@ impl Timeline {
         &self,
         playhead: impl Into<Playhead>,
     ) -> impl DoubleEndedIterator<Item = Update> + Clone + '_ {
-        let index = self.index(playhead.into());
+        let index = self.index(playhead.into() + 1);
 
         let start = match self
             .updates
@@ -177,7 +177,7 @@ impl Timeline {
         &self,
         playhead: impl Into<Playhead>,
     ) -> impl DoubleEndedIterator<Item = Bucket> + Clone + '_ {
-        let index = self.index(playhead.into());
+        let index = self.index(playhead.into() + 1);
 
         let start = match self
             .update_rate
@@ -209,6 +209,17 @@ impl Playhead {
 impl From<Index> for Playhead {
     fn from(index: Index) -> Self {
         Self::Paused(index)
+    }
+}
+
+impl Add<usize> for Playhead {
+    type Output = Self;
+
+    fn add(self, rhs: usize) -> Self::Output {
+        match self {
+            Playhead::Live => Playhead::Live,
+            Playhead::Paused(index) => Playhead::Paused(index + rhs),
+        }
     }
 }
 

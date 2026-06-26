@@ -5,7 +5,7 @@ use crate::widget::card;
 
 use iced::padding;
 use iced::widget::{column, container, row, scrollable, text};
-use iced::{Element, Fill, Font};
+use iced::{Element, Fill, FillPortion, Font};
 
 #[derive(Debug, Default)]
 pub struct Update {
@@ -58,37 +58,34 @@ impl Update {
         let message_rate = chart::message_rate(timeline, playhead, &self.message_rate, zoom);
 
         let message_log = container(
-            scrollable(
-                column({
-                    let messages: Vec<_> = timeline
-                        .updates(playhead)
-                        .map(|update| update.message)
-                        .take(20)
-                        .map(|message| text(message).font(Font::MONOSPACE).size(10).into())
-                        .collect();
+            scrollable({
+                let message = timeline
+                    .updates(playhead)
+                    .next()
+                    .map(|update| update.message)
+                    .unwrap_or_default();
 
-                    messages.into_iter().rev()
-                })
-                .spacing(5),
-            )
+                text(message).font(Font::MONOSPACE).size(10)
+            })
             .width(Fill)
             .height(Fill)
-            .anchor_bottom(),
+            .spacing(10),
         )
         .padding(padding::all(10).top(0));
 
         column![
-            card("Update", update),
             row![
-                card("Tasks Spawned", tasks_spawned),
-                card("Subscriptions Alive", subscriptions_alive)
-            ]
-            .spacing(10),
-            row![
-                card("Message Rate", message_rate),
-                card("Message Log", message_log)
+                container(card("Update", update)).width(FillPortion(2)),
+                card("Last Message", message_log)
             ]
             .spacing(10)
+            .height(FillPortion(2)),
+            row![
+                card("Tasks Spawned", tasks_spawned),
+                card("Subscriptions Alive", subscriptions_alive),
+                card("Message Rate", message_rate),
+            ]
+            .spacing(10),
         ]
         .spacing(10)
         .into()

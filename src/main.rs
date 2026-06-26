@@ -247,6 +247,9 @@ impl Comet {
     fn interact_with_chart(&mut self, interaction: chart::Interaction) -> Task<Message> {
         match interaction {
             chart::Interaction::Hovered(index) => self.rewind(index),
+            chart::Interaction::Selected(index) => {
+                self.update_playhead(timeline::Playhead::Paused(index))
+            }
             chart::Interaction::Unhovered => self.go_live(),
             chart::Interaction::ZoomChanged(zoom) => {
                 self.zoom = zoom;
