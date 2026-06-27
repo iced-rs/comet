@@ -57,7 +57,7 @@ impl Update {
             chart::subscriptions_alive(timeline, playhead, &self.subscriptions_alive, zoom);
         let message_rate = chart::message_rate(timeline, playhead, &self.message_rate, zoom);
 
-        let message_log = container(
+        let last_message = container(
             scrollable({
                 let message = timeline
                     .updates(playhead)
@@ -73,19 +73,19 @@ impl Update {
         )
         .padding(padding::all(10).top(0));
 
-        column![
-            row![
-                container(card("Update", update)).width(FillPortion(2)),
-                card("Last Message", message_log)
-            ]
-            .spacing(10)
-            .height(FillPortion(2)),
-            row![
+        row![
+            column![
+                container(card("Update", update)).height(FillPortion(2)),
                 card("Tasks Spawned", tasks_spawned),
                 card("Subscriptions Alive", subscriptions_alive),
+            ]
+            .width(FillPortion(2))
+            .spacing(10),
+            column![
+                container(card("Last Message", last_message)).height(FillPortion(2)),
                 card("Message Rate", message_rate),
             ]
-            .spacing(10),
+            .spacing(10)
         ]
         .spacing(10)
         .into()
