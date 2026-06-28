@@ -2,7 +2,7 @@ use iced::border;
 use iced::padding;
 use iced::theme;
 use iced::widget::{column, container, space, text, tooltip};
-use iced::{Background, Color, Element, Font, Theme};
+use iced::{Background, Color, Element, Theme};
 
 pub use iced_palace::widget::diffused_text;
 
@@ -11,7 +11,7 @@ pub fn card<'a, Message: 'a>(
     content: impl Into<Element<'a, Message>>,
 ) -> Element<'a, Message> {
     container(column![
-        container(diffused_text(title).font(Font::MONOSPACE)).padding(padding::all(10).bottom(5)),
+        container(diffused_text(title)).padding(padding::all(10).bottom(5)),
         content.into()
     ])
     .style(|theme| {
@@ -48,7 +48,7 @@ pub fn tip<'a, Message: 'a>(
 ) -> Element<'a, Message> {
     tooltip(
         content,
-        container(text(tip).font(Font::MONOSPACE).size(8))
+        container(text(tip).size(8))
             .padding(5)
             .style(container::rounded_box),
         position,

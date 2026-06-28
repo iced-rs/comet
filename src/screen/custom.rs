@@ -5,7 +5,7 @@ use crate::timeline::{self, Timeline};
 use crate::widget::card;
 
 use iced::widget::{center, column, container, rich_text, span};
-use iced::{Color, Element, Fill, Font};
+use iced::{Color, Element, Fill};
 
 use std::collections::BTreeMap;
 
@@ -107,7 +107,6 @@ impl Custom {
         if self.timings.is_empty() {
             let code = |text| {
                 span(text)
-                    .font(Font::MONOSPACE)
                     .color(Color::WHITE)
                     .background(Color::BLACK)
                     .padding([0, 2])

@@ -20,7 +20,7 @@ use iced::widget::{
     text, tooltip,
 };
 use iced::window;
-use iced::{Center, Element, Font, Point, Shrink, Size, Subscription, Task, Theme};
+use iced::{Center, Element, Fill, Font, Point, Shrink, Size, Subscription, Task, Theme};
 
 pub fn main() -> iced::Result {
     tracing_subscriber::fmt::init();
@@ -35,6 +35,7 @@ pub fn main() -> iced::Result {
         .subscription(Comet::subscription)
         .theme(Comet::theme)
         .font(icon::FONT)
+        .default_font(Font::MONOSPACE)
         .window(window::Settings {
             size: Size::new(800.0, 600.0),
             position: window::Position::SpecificWith(|window, monitor| {
@@ -307,10 +308,7 @@ impl Comet {
             State::Waiting => center(
                 row![
                     svg(self.logo.clone()).width(100).height(100),
-                    diffused_text("comet")
-                        .font(Font::MONOSPACE)
-                        .size(70)
-                        .height(105)
+                    diffused_text("comet").size(70).height(105)
                 ]
                 .spacing(30)
                 .align_y(Center),
@@ -324,7 +322,7 @@ impl Comet {
                 let header = {
                     let logo = row![
                         svg(self.logo.clone()).width(24).height(24),
-                        diffused_text(name).font(Font::MONOSPACE).size(18),
+                        diffused_text(name).size(18),
                     ]
                     .spacing(10)
                     .align_y(Center);
@@ -338,7 +336,6 @@ impl Comet {
                         let datetime: chrono::DateTime<chrono::Local> = time.into();
 
                         text(datetime.format("%d/%m/%Y %H:%M:%S%.3f").to_string())
-                            .font(Font::MONOSPACE)
                             .size(10)
                             .into()
                     } else {
@@ -361,7 +358,7 @@ impl Comet {
                             on_press: Message,
                             is_active: bool,
                         ) -> Element<'a, Message> {
-                            let label = text(label).font(Font::MONOSPACE);
+                            let label = text(label);
 
                             if is_active {
                                 stack![
@@ -429,7 +426,13 @@ impl Comet {
                 };
 
                 let timeline = {
-                    let counter = tip(
+                    let timeline = slider(
+                        self.timeline.range(),
+                        self.timeline.index(self.playhead),
+                        Message::PlayheadChanged,
+                    );
+
+                    let buffer = tip(
                         progress_bar(
                             0.0..=self.timeline.capacity() as f32,
                             self.timeline.len() as f32,
@@ -444,11 +447,41 @@ impl Comet {
                         tooltip::Position::Top,
                     );
 
-                    let timeline = slider(
-                        self.timeline.range(),
+                    let counter = text!(
+                        "{} / {}",
                         self.timeline.index(self.playhead),
-                        Message::PlayheadChanged,
-                    );
+                        self.timeline.len()
+                    )
+                    .size(10);
+
+                    let event = self.timeline.get(self.playhead).map(|event| {
+                        match event {
+                            iced_beacon::Event::Connected { .. } => text("Connected"),
+                            iced_beacon::Event::Disconnected { .. } => text("Disconnected"),
+                            iced_beacon::Event::ThemeChanged { .. } => text("Theme Changed"),
+                            iced_beacon::Event::SpanFinished { span, .. } => match span {
+                                iced_beacon::Span::Boot => text("Boot"),
+                                iced_beacon::Span::Update { message, .. } => {
+                                    text!(
+                                        "Update: {}",
+                                        message.replace("\n", " ").replace("    ", "")
+                                    )
+                                }
+                                iced_beacon::Span::View { .. } => text("View"),
+                                iced_beacon::Span::Layout { .. } => text("Layout"),
+                                iced_beacon::Span::Interact { .. } => text("Interact"),
+                                iced_beacon::Span::Draw { .. } => text("Draw"),
+                                iced_beacon::Span::Present { .. } => text("Present"),
+                                iced_beacon::Span::Custom { name } => text(name),
+                            },
+                            iced_beacon::Event::QuitRequested { .. } => text("Quit"),
+                            iced_beacon::Event::AlreadyRunning { .. } => text("Already Running"),
+                        }
+                        .width(Fill)
+                        .size(10)
+                        .wrapping(text::Wrapping::None)
+                        .ellipsis(text::Ellipsis::End)
+                    });
 
                     let live: Element<_> = {
                         let is_live = self.playhead.is_live();
@@ -461,7 +494,7 @@ impl Comet {
                             }
                         });
 
-                        let live = row![indicator, text("LIVE").size(12).font(Font::MONOSPACE)]
+                        let live = row![indicator, text("LIVE").size(12)]
                             .spacing(5)
                             .align_y(Center);
 
@@ -476,7 +509,13 @@ impl Comet {
                         }
                     };
 
-                    row![counter, timeline, live].align_y(Center).spacing(10)
+                    column![
+                        timeline,
+                        row![buffer, counter, event, live]
+                            .align_y(Center)
+                            .spacing(10)
+                    ]
+                    .spacing(5)
                 };
 
                 column![header, screen, timeline]

@@ -5,7 +5,7 @@ use crate::widget::card;
 
 use iced::padding;
 use iced::widget::{column, container, row, scrollable, text};
-use iced::{Element, Fill, FillPortion, Font};
+use iced::{Element, Fill, FillPortion};
 
 #[derive(Debug, Default)]
 pub struct Update {
@@ -65,7 +65,7 @@ impl Update {
                     .map(|update| update.message)
                     .unwrap_or_default();
 
-                text(message).font(Font::MONOSPACE).size(10)
+                text(message).size(10)
             })
             .width(Fill)
             .height(Fill)

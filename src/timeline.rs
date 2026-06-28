@@ -3,6 +3,7 @@ use crate::beacon::span;
 use crate::core::time::{Duration, SystemTime};
 
 use std::collections::VecDeque;
+use std::fmt;
 use std::ops::{Add, RangeInclusive, Sub};
 
 #[derive(Debug, Clone, Default)]
@@ -37,8 +38,8 @@ impl Timeline {
         Index(self.events.len() + self.removed)
     }
 
-    pub fn index(&self, playhead: Playhead) -> Index {
-        match playhead {
+    pub fn index(&self, playhead: impl Into<Playhead>) -> Index {
+        match playhead.into() {
             Playhead::Live => self.end(),
             Playhead::Paused(index) => index,
         }
@@ -60,7 +61,7 @@ impl Timeline {
         } = event
         {
             self.updates.push_back(Update {
-                index: self.end(),
+                index: self.end() + 1,
                 message: message.clone(),
                 duration,
                 number,
@@ -80,7 +81,7 @@ impl Timeline {
                 }
                 _ => {
                     self.update_rate.push_back(Bucket {
-                        index: self.end(),
+                        index: self.end() + 1,
                         at,
                         second,
                         total: 1,
@@ -117,6 +118,10 @@ impl Timeline {
         self.events.clear();
     }
 
+    pub fn get(&self, playhead: impl Into<Playhead>) -> Option<&beacon::Event> {
+        self.seek(playhead).next()
+    }
+
     pub fn seek(
         &self,
         playhead: impl Into<Playhead>,
@@ -124,7 +129,7 @@ impl Timeline {
     + ExactSizeIterator<Item = &beacon::Event>
     + Clone
     + '_ {
-        let index = self.index(playhead.into()) - self.removed;
+        let index = self.index(playhead) - self.removed;
 
         self.events.range(0..index.0).rev()
     }
@@ -137,7 +142,7 @@ impl Timeline {
     + Clone
     + '_ {
         let playhead = playhead.into();
-        let index = self.index(playhead + 1) - self.removed;
+        let index = self.index(playhead) - self.removed;
 
         self.seek(playhead)
             .enumerate()
@@ -161,13 +166,14 @@ impl Timeline {
         &self,
         playhead: impl Into<Playhead>,
     ) -> impl DoubleEndedIterator<Item = Update> + Clone + '_ {
-        let index = self.index(playhead.into() + 1);
+        let index = self.index(playhead);
 
         let start = match self
             .updates
             .binary_search_by(|update| update.index.cmp(&index))
         {
-            Ok(i) | Err(i) => i,
+            Ok(i) => i + 1,
+            Err(i) => i,
         };
 
         self.updates.range(0..start).cloned().rev()
@@ -177,13 +183,14 @@ impl Timeline {
         &self,
         playhead: impl Into<Playhead>,
     ) -> impl DoubleEndedIterator<Item = Bucket> + Clone + '_ {
-        let index = self.index(playhead.into() + 1);
+        let index = self.index(playhead);
 
         let start = match self
             .update_rate
             .binary_search_by(|update| update.index.cmp(&index))
         {
-            Ok(i) | Err(i) => i,
+            Ok(i) => i + 1,
+            Err(i) => i,
         };
 
         self.update_rate.range(0..start).cloned().rev()
@@ -251,6 +258,12 @@ impl num_traits::FromPrimitive for Index {
 impl num_traits::AsPrimitive<f64> for Index {
     fn as_(self) -> f64 {
         self.0 as f64
+    }
+}
+
+impl fmt::Display for Index {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
