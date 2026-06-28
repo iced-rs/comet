@@ -12,6 +12,7 @@ use crate::screen::custom;
 use crate::timeline::Timeline;
 use crate::widget::{circle, diffused_text, tip};
 
+use iced::animation;
 use iced::border;
 use iced::keyboard;
 use iced::time::SystemTime;
@@ -20,7 +21,11 @@ use iced::widget::{
     text, tooltip,
 };
 use iced::window;
-use iced::{Center, Element, Fill, Font, Point, Shrink, Size, Subscription, Task, Theme};
+use iced::{
+    Animation, Center, Element, Fill, Font, Point, Shrink, Size, Subscription, Task, Theme,
+};
+
+use std::time::Instant;
 
 pub fn main() -> iced::Result {
     tracing_subscriber::fmt::init();
@@ -55,6 +60,8 @@ struct Comet {
     playhead: timeline::Playhead,
     screen: Screen,
     zoom: chart::Zoom,
+    slide: Animation<timeline::Index>,
+    now: Instant,
 }
 
 #[derive(Debug)]
@@ -96,6 +103,7 @@ enum Message {
     IncrementBarWidth,
     DecrementBarWidth,
     Quit,
+    Tick(Instant),
 }
 
 impl Comet {
@@ -109,6 +117,8 @@ impl Comet {
                 playhead: timeline::Playhead::Live,
                 screen: Screen::Overview(screen::Overview::new()),
                 zoom: chart::Zoom::default(),
+                slide: Animation::new(timeline::Index::default()),
+                now: Instant::now(),
             },
             Task::none(),
         )
@@ -242,6 +252,18 @@ impl Comet {
                 Task::none()
             }
             Message::Quit => iced::exit(),
+            Message::Tick(now) => {
+                self.now = now;
+
+                if !self.slide.is_animating(now) {
+                    return Task::none();
+                }
+
+                self.update_playhead(timeline::Playhead::Paused(
+                    self.slide
+                        .interpolate_with(std::convert::identity, self.now),
+                ))
+            }
         }
     }
 
@@ -249,7 +271,12 @@ impl Comet {
         match interaction {
             chart::Interaction::Hovered(index) => self.rewind(index),
             chart::Interaction::Selected(index) => {
-                self.update_playhead(timeline::Playhead::Paused(index))
+                self.slide = Animation::new(self.timeline.index(self.playhead))
+                    .quick()
+                    .easing(animation::Easing::EaseInOutExpo)
+                    .go(index, Instant::now());
+
+                Task::none()
             }
             chart::Interaction::Unhovered => self.go_live(),
             chart::Interaction::ZoomChanged(zoom) => {
@@ -553,7 +580,13 @@ impl Comet {
             }
         });
 
-        Subscription::batch([beacon, hotkeys])
+        let animations = if self.slide.is_animating(self.now) {
+            window::frames().map(Message::Tick)
+        } else {
+            Subscription::none()
+        };
+
+        Subscription::batch([beacon, hotkeys, animations])
     }
 
     fn title(&self) -> String {

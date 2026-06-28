@@ -230,7 +230,7 @@ impl Add<usize> for Playhead {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Index(usize);
 
 impl From<u8> for Index {
@@ -264,6 +264,18 @@ impl num_traits::AsPrimitive<f64> for Index {
 impl fmt::Display for Index {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl iced::animation::Float for Index {
+    fn float_value(&self) -> f32 {
+        self.0 as f32
+    }
+}
+
+impl iced::animation::Interpolable for Index {
+    fn interpolated(&self, other: Self, ratio: f32) -> Self {
+        Self((self.0 as f32 + (other.0 as f32 - self.0 as f32) * ratio).round() as usize)
     }
 }
 
