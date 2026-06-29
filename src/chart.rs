@@ -124,24 +124,26 @@ impl Default for Zoom {
 }
 
 pub fn performance<'a>(
-    timeline: &'a Timeline,
-    playhead: timeline::Playhead,
-    cache: &'a canvas::Cache,
     stage: Stage,
+    cache: &'a canvas::Cache,
+    timeline: &'a Timeline,
+    offset: timeline::Playhead,
+    selection: timeline::Playhead,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
     match stage {
-        Stage::Update => updates(timeline, playhead, cache, zoom),
+        Stage::Update => updates(cache, timeline, offset, selection, zoom),
         _ => canvas(BarChart {
             datapoints: timeline
-                .timeframes(playhead, move |event| stage.duration(event))
+                .timeframes(offset, move |event| stage.duration(event))
                 .map(|timeframe| (timeframe.index, timeframe.duration)),
-            cache,
             to_float: |duration| duration.as_secs_f64(),
             to_string: |duration| format!("{duration:?}"),
             average: |duration, n| duration / n,
             average_to_float: |duration| duration.as_secs_f64(),
             average_to_string: |duration| format!("{duration:?}"),
+            cache,
+            selection,
             zoom,
         })
         .width(Fill)
@@ -151,21 +153,23 @@ pub fn performance<'a>(
 }
 
 pub fn updates<'a>(
-    timeline: &'a Timeline,
-    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
+    timeline: &'a Timeline,
+    offset: timeline::Playhead,
+    selection: timeline::Playhead,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
-            .updates(playhead)
+            .updates(offset)
             .map(|update| (update.index, update.duration)),
-        cache,
         to_float: |duration| duration.as_secs_f64(),
         to_string: |duration| format!("{duration:?}"),
         average: |duration, n| duration / n,
         average_to_float: |duration| duration.as_secs_f64(),
         average_to_string: |duration| format!("{duration:?}"),
+        cache,
+        selection,
         zoom,
     })
     .width(Fill)
@@ -174,14 +178,15 @@ pub fn updates<'a>(
 }
 
 pub fn tasks_spawned<'a>(
-    timeline: &'a Timeline,
-    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
+    timeline: &'a Timeline,
+    offset: timeline::Playhead,
+    selection: timeline::Playhead,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
-            .updates(playhead)
+            .updates(offset)
             .map(|update| (update.index, update.tasks)),
         cache,
         to_float: |amount| amount as f64,
@@ -189,6 +194,7 @@ pub fn tasks_spawned<'a>(
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1}", average),
+        selection,
         zoom,
     })
     .width(Fill)
@@ -197,14 +203,15 @@ pub fn tasks_spawned<'a>(
 }
 
 pub fn subscriptions_alive<'a>(
-    timeline: &'a Timeline,
-    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
+    timeline: &'a Timeline,
+    offset: timeline::Playhead,
+    selection: timeline::Playhead,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
         datapoints: timeline
-            .updates(playhead)
+            .updates(offset)
             .map(|update| (update.index, update.subscriptions)),
         cache,
         to_float: |amount| amount as f64,
@@ -212,6 +219,7 @@ pub fn subscriptions_alive<'a>(
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1}", average),
+        selection,
         zoom,
     })
     .width(Fill)
@@ -220,13 +228,14 @@ pub fn subscriptions_alive<'a>(
 }
 
 pub fn layers_rendered<'a>(
-    timeline: &'a Timeline,
-    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
+    timeline: &'a Timeline,
+    offset: timeline::Playhead,
+    selection: timeline::Playhead,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
     canvas(BarChart {
-        datapoints: timeline.seek_with_index(playhead).filter_map(|(i, event)| {
+        datapoints: timeline.seek_with_index(offset).filter_map(|(i, event)| {
             if let beacon::Event::SpanFinished {
                 span: span::Span::Present { layers, .. },
                 ..
@@ -243,6 +252,7 @@ pub fn layers_rendered<'a>(
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1}", average),
+        selection,
         zoom,
     })
     .width(Fill)
@@ -251,13 +261,14 @@ pub fn layers_rendered<'a>(
 }
 
 pub fn message_rate<'a>(
-    timeline: &'a Timeline,
-    playhead: timeline::Playhead,
     cache: &'a canvas::Cache,
+    timeline: &'a Timeline,
+    offset: timeline::Playhead,
+    selection: timeline::Playhead,
     zoom: Zoom,
 ) -> Element<'a, Interaction> {
     let updates_per_second = timeline
-        .update_rate(playhead)
+        .update_rate(offset)
         .map(|update| (update.index, update.total));
 
     canvas(BarChart {
@@ -268,6 +279,7 @@ pub fn message_rate<'a>(
         average: |amount, n| amount as f64 / n as f64,
         average_to_float: std::convert::identity,
         average_to_string: |average| format!("{:.1} msg/s", average),
+        selection,
         zoom,
     })
     .width(Fill)
@@ -286,6 +298,7 @@ where
     average: fn(T, u32) -> A,
     average_to_float: fn(A) -> f64,
     average_to_string: fn(A) -> String,
+    selection: timeline::Playhead,
     zoom: Zoom,
 }
 
@@ -381,9 +394,14 @@ where
             let bar_width = f32::from(self.zoom.0);
             let amount = (bounds.width / bar_width).ceil() as usize;
 
-            let datapoints = self.datapoints.clone().map(|(_i, datapoint)| datapoint);
+            let datapoints = self.datapoints.clone();
 
-            let Some(max) = datapoints.clone().take(amount).max() else {
+            let Some(max) = datapoints
+                .clone()
+                .take(amount)
+                .map(|(_, datapoint)| datapoint)
+                .max()
+            else {
                 return;
             };
 
@@ -393,8 +411,9 @@ where
                 let sum = datapoints
                     .clone()
                     .take(amount * 3)
-                    .inspect(|_datapoint| {
+                    .map(|(_, datapoint)| {
                         n += 1;
+                        datapoint
                     })
                     .sum::<T>();
 
@@ -409,7 +428,9 @@ where
 
             let pixels_per_unit = average_pixels.min(max_pixels);
 
-            for (i, datapoint) in datapoints.take(amount).enumerate() {
+            let mut selected = false;
+
+            for (i, (index, datapoint)) in datapoints.take(amount).enumerate() {
                 let value = (self.to_float)(datapoint);
                 let bar_height = (value * pixels_per_unit) as f32;
 
@@ -431,6 +452,19 @@ where
                         palette.background.strong.color
                     },
                 );
+
+                if !selected
+                    && let timeline::Playhead::Paused(selection) = self.selection
+                    && selection >= index
+                {
+                    frame.fill_rectangle(
+                        Point::new(bar.x + bar.width, 0.0),
+                        Size::new(1.0, bounds.height),
+                        palette.background.base.text,
+                    );
+
+                    selected = true;
+                }
 
                 let bar_overlay = Rectangle {
                     y: 0.0,
@@ -469,7 +503,7 @@ where
             frame.fill_rectangle(
                 Point::new(0.0, average_y),
                 Size::new(frame.width(), 1.0),
-                palette.background.base.text.scale_alpha(0.5),
+                palette.background.base.text.scale_alpha(0.3),
             );
 
             frame.fill_text(canvas::Text {
@@ -485,7 +519,7 @@ where
             frame.fill_rectangle(
                 Point::new(0.0, max_y),
                 Size::new(frame.width(), 1.0),
-                palette.background.base.text.scale_alpha(0.5),
+                palette.background.base.text.scale_alpha(0.3),
             );
 
             frame.fill_text(canvas::Text {

@@ -79,7 +79,8 @@ impl Present {
     pub fn view<'a>(
         &'a self,
         timeline: &'a Timeline,
-        playhead: timeline::Playhead,
+        offset: timeline::Playhead,
+        selection: timeline::Playhead,
         zoom: chart::Zoom,
     ) -> Element<'a, chart::Interaction> {
         let primitives = [
@@ -104,11 +105,25 @@ impl Present {
             row![
                 card(
                     prepare_stage.to_string(),
-                    chart::performance(timeline, playhead, &cache.prepare, prepare_stage, zoom)
+                    chart::performance(
+                        prepare_stage,
+                        &cache.prepare,
+                        timeline,
+                        offset,
+                        selection,
+                        zoom
+                    )
                 ),
                 card(
                     render_stage.to_string(),
-                    chart::performance(timeline, playhead, &cache.render, render_stage, zoom)
+                    chart::performance(
+                        render_stage,
+                        &cache.render,
+                        timeline,
+                        offset,
+                        selection,
+                        zoom
+                    )
                 ),
             ]
             .spacing(10)
@@ -119,16 +134,17 @@ impl Present {
             card(
                 "Present",
                 chart::performance(
-                    timeline,
-                    playhead,
-                    &self.present,
                     chart::Stage::Present,
+                    &self.present,
+                    timeline,
+                    offset,
+                    selection,
                     zoom,
                 ),
             ),
             card(
                 "Layers",
-                chart::layers_rendered(timeline, playhead, &self.layers, zoom),
+                chart::layers_rendered(&self.layers, timeline, offset, selection, zoom),
             ),
         ]
         .spacing(10)

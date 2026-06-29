@@ -12,7 +12,6 @@ use crate::screen::custom;
 use crate::timeline::Timeline;
 use crate::widget::{circle, diffused_text, tip};
 
-use iced::animation;
 use iced::border;
 use iced::keyboard;
 use iced::time::SystemTime;
@@ -21,11 +20,7 @@ use iced::widget::{
     text, tooltip,
 };
 use iced::window;
-use iced::{
-    Animation, Center, Element, Fill, Font, Point, Shrink, Size, Subscription, Task, Theme,
-};
-
-use std::time::Instant;
+use iced::{Center, Element, Fill, Font, Point, Shrink, Size, Subscription, Task, Theme};
 
 pub fn main() -> iced::Result {
     tracing_subscriber::fmt::init();
@@ -57,11 +52,10 @@ struct Comet {
     state: State,
     theme: Theme,
     timeline: Timeline,
-    playhead: timeline::Playhead,
+    offset: timeline::Playhead,
+    selection: timeline::Playhead,
     screen: Screen,
     zoom: chart::Zoom,
-    slide: Animation<timeline::Index>,
-    now: Instant,
 }
 
 #[derive(Debug)]
@@ -103,7 +97,6 @@ enum Message {
     IncrementBarWidth,
     DecrementBarWidth,
     Quit,
-    Tick(Instant),
 }
 
 impl Comet {
@@ -114,11 +107,10 @@ impl Comet {
                 state: State::Waiting,
                 theme: Theme::CatppuccinMocha,
                 timeline: Timeline::new(),
-                playhead: timeline::Playhead::Live,
+                offset: timeline::Playhead::Live,
+                selection: timeline::Playhead::Live,
                 screen: Screen::Overview(screen::Overview::new()),
                 zoom: chart::Zoom::default(),
-                slide: Animation::new(timeline::Index::default()),
-                now: Instant::now(),
             },
             Task::none(),
         )
@@ -142,7 +134,8 @@ impl Comet {
                         };
 
                         if Some(&name) != current_name {
-                            self.playhead = timeline::Playhead::Live;
+                            self.offset = timeline::Playhead::Live;
+                            self.selection = timeline::Playhead::Live;
                             self.timeline.clear();
                         }
 
@@ -183,16 +176,16 @@ impl Comet {
             Message::PlayheadChanged(index) => {
                 self.update_playhead(timeline::Playhead::Paused(index))
             }
-            Message::TogglePause => self.update_playhead(if self.playhead.is_live() {
+            Message::TogglePause => self.update_playhead(if self.offset.is_live() {
                 timeline::Playhead::Paused(self.timeline.end())
             } else {
                 timeline::Playhead::Live
             }),
-            Message::Previous => self.update_playhead(match self.playhead {
+            Message::Previous => self.update_playhead(match self.offset {
                 timeline::Playhead::Live => timeline::Playhead::Paused(self.timeline.end()),
                 timeline::Playhead::Paused(index) => timeline::Playhead::Paused(index - 1),
             }),
-            Message::Next => self.update_playhead(match self.playhead {
+            Message::Next => self.update_playhead(match self.offset {
                 timeline::Playhead::Live => timeline::Playhead::Live,
                 timeline::Playhead::Paused(index) => {
                     if index + 1 >= self.timeline.end() {
@@ -219,7 +212,7 @@ impl Comet {
                 Task::none()
             }
             Message::ShowCustom => {
-                self.screen = Screen::Custom(screen::Custom::new(&self.timeline, self.playhead));
+                self.screen = Screen::Custom(screen::Custom::new(&self.timeline, self.offset));
 
                 Task::none()
             }
@@ -252,18 +245,6 @@ impl Comet {
                 Task::none()
             }
             Message::Quit => iced::exit(),
-            Message::Tick(now) => {
-                self.now = now;
-
-                if !self.slide.is_animating(now) {
-                    return Task::none();
-                }
-
-                self.update_playhead(timeline::Playhead::Paused(
-                    self.slide
-                        .interpolate_with(std::convert::identity, self.now),
-                ))
-            }
         }
     }
 
@@ -271,10 +252,12 @@ impl Comet {
         match interaction {
             chart::Interaction::Hovered(index) => self.rewind(index),
             chart::Interaction::Selected(index) => {
-                self.slide = Animation::new(self.timeline.index(self.playhead))
-                    .quick()
-                    .easing(animation::Easing::EaseInOutExpo)
-                    .go(index, Instant::now());
+                if let timeline::Playhead::Live = self.offset {
+                    self.offset = timeline::Playhead::Paused(self.timeline.end());
+                }
+
+                self.selection = timeline::Playhead::Paused(index);
+                self.screen.invalidate();
 
                 Task::none()
             }
@@ -289,11 +272,14 @@ impl Comet {
     }
 
     fn update_playhead(&mut self, playhead: timeline::Playhead) -> Task<Message> {
-        self.playhead = playhead;
+        self.offset = playhead;
         self.screen.invalidate();
 
         match playhead {
-            timeline::Playhead::Live => self.go_live(),
+            timeline::Playhead::Live => {
+                self.selection = timeline::Playhead::Live;
+                self.go_live()
+            }
             timeline::Playhead::Paused(index) => self.rewind(index),
         }
     }
@@ -359,7 +345,7 @@ impl Comet {
                         Connection::Disconnected { .. } => palette.danger.base.color,
                     });
 
-                    let time = if let Some(time) = self.timeline.time_at(self.playhead) {
+                    let time = if let Some(time) = self.timeline.time_at(self.offset) {
                         let datetime: chrono::DateTime<chrono::Local> = time.into();
 
                         text(datetime.format("%d/%m/%Y %H:%M:%S%.3f").to_string())
@@ -439,23 +425,23 @@ impl Comet {
 
                 let screen = match &self.screen {
                     Screen::Overview(overview) => overview
-                        .view(&self.timeline, self.playhead, self.zoom)
+                        .view(&self.timeline, self.offset, self.selection, self.zoom)
                         .map(Message::Chart),
                     Screen::Update(update) => update
-                        .view(&self.timeline, self.playhead, self.zoom)
+                        .view(&self.timeline, self.offset, self.selection, self.zoom)
                         .map(Message::Chart),
                     Screen::Present(present) => present
-                        .view(&self.timeline, self.playhead, self.zoom)
+                        .view(&self.timeline, self.offset, self.selection, self.zoom)
                         .map(Message::Chart),
                     Screen::Custom(custom) => custom
-                        .view(&self.timeline, self.playhead, self.zoom)
+                        .view(&self.timeline, self.offset, self.selection, self.zoom)
                         .map(Message::Custom),
                 };
 
                 let timeline = {
                     let timeline = slider(
                         self.timeline.range(),
-                        self.timeline.index(self.playhead),
+                        self.timeline.index(self.offset),
                         Message::PlayheadChanged,
                     );
 
@@ -476,12 +462,12 @@ impl Comet {
 
                     let counter = text!(
                         "{} / {}",
-                        self.timeline.index(self.playhead),
+                        self.timeline.index(self.offset),
                         self.timeline.len()
                     )
                     .size(10);
 
-                    let event = self.timeline.get(self.playhead).map(|event| {
+                    let event = self.timeline.get(self.selection).map(|event| {
                         match event {
                             iced_beacon::Event::Connected { .. } => text("Connected"),
                             iced_beacon::Event::Disconnected { .. } => text("Disconnected"),
@@ -511,7 +497,7 @@ impl Comet {
                     });
 
                     let live: Element<_> = {
-                        let is_live = self.playhead.is_live();
+                        let is_live = self.offset.is_live();
 
                         let indicator = circle(move |palette| {
                             if is_live {
@@ -580,13 +566,7 @@ impl Comet {
             }
         });
 
-        let animations = if self.slide.is_animating(self.now) {
-            window::frames().map(Message::Tick)
-        } else {
-            Subscription::none()
-        };
-
-        Subscription::batch([beacon, hotkeys, animations])
+        Subscription::batch([beacon, hotkeys])
     }
 
     fn title(&self) -> String {

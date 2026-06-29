@@ -101,7 +101,8 @@ impl Custom {
     pub fn view<'a>(
         &'a self,
         timeline: &'a Timeline,
-        playhead: timeline::Playhead,
+        offset: timeline::Playhead,
+        selection: timeline::Playhead,
         zoom: chart::Zoom,
     ) -> Element<'a, Message> {
         if self.timings.is_empty() {
@@ -140,10 +141,11 @@ impl Custom {
             card(
                 name,
                 chart::performance(
-                    timeline,
-                    playhead,
-                    cache,
                     chart::Stage::Custom(name.to_owned()),
+                    cache,
+                    timeline,
+                    offset,
+                    selection,
                     zoom,
                 )
                 .map(Message::Chart),

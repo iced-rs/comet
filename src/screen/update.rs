@@ -48,19 +48,27 @@ impl Update {
     pub fn view<'a>(
         &'a self,
         timeline: &'a Timeline,
-        playhead: timeline::Playhead,
+        offset: timeline::Playhead,
+        selection: timeline::Playhead,
         zoom: chart::Zoom,
     ) -> Element<'a, chart::Interaction> {
-        let update = chart::updates(timeline, playhead, &self.update, zoom);
-        let tasks_spawned = chart::tasks_spawned(timeline, playhead, &self.tasks_spawned, zoom);
-        let subscriptions_alive =
-            chart::subscriptions_alive(timeline, playhead, &self.subscriptions_alive, zoom);
-        let message_rate = chart::message_rate(timeline, playhead, &self.message_rate, zoom);
+        let update = chart::updates(&self.update, timeline, offset, selection, zoom);
+        let tasks_spawned =
+            chart::tasks_spawned(&self.tasks_spawned, timeline, offset, selection, zoom);
+        let subscriptions_alive = chart::subscriptions_alive(
+            &self.subscriptions_alive,
+            timeline,
+            offset,
+            selection,
+            zoom,
+        );
+        let message_rate =
+            chart::message_rate(&self.message_rate, timeline, offset, selection, zoom);
 
         let last_message = container(
             scrollable({
                 let message = timeline
-                    .updates(playhead)
+                    .updates(selection)
                     .next()
                     .map(|update| update.message)
                     .unwrap_or_default();

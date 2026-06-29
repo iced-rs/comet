@@ -63,7 +63,8 @@ impl Overview {
     pub fn view<'a>(
         &'a self,
         timeline: &'a Timeline,
-        playhead: timeline::Playhead,
+        offset: timeline::Playhead,
+        selection: timeline::Playhead,
         zoom: chart::Zoom,
     ) -> Element<'a, chart::Interaction> {
         let update = (chart::Stage::Update, &self.update);
@@ -78,7 +79,7 @@ impl Overview {
                 row(charts.into_iter().map(|(stage, cache)| {
                     card(
                         stage.to_string(),
-                        chart::performance(timeline, playhead, cache, stage, zoom),
+                        chart::performance(stage, cache, timeline, offset, selection, zoom),
                     )
                 }))
                 .spacing(10)
