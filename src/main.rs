@@ -476,12 +476,15 @@ impl Comet {
                                 iced_beacon::Span::Boot => text("Boot"),
                                 iced_beacon::Span::Update { message, .. } => {
                                     let boundary = message.floor_char_boundary(200);
-                                    let next = message.ceil_char_boundary(201);
 
                                     text!(
                                         "Update: {}{}",
                                         message[..boundary].replace("\n", " ").replace("    ", ""),
-                                        if boundary == next { "" } else { "..." }
+                                        if message[boundary..].is_empty() {
+                                            ""
+                                        } else {
+                                            "..."
+                                        }
                                     )
                                 }
                                 iced_beacon::Span::View { .. } => text("View"),
