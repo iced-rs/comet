@@ -475,9 +475,13 @@ impl Comet {
                             iced_beacon::Event::SpanFinished { span, .. } => match span {
                                 iced_beacon::Span::Boot => text("Boot"),
                                 iced_beacon::Span::Update { message, .. } => {
+                                    let boundary = message.floor_char_boundary(200);
+                                    let next = message.ceil_char_boundary(201);
+
                                     text!(
-                                        "Update: {}",
-                                        message.replace("\n", " ").replace("    ", "")
+                                        "Update: {}{}",
+                                        message[..boundary].replace("\n", " ").replace("    ", ""),
+                                        if boundary == next { "" } else { "..." }
                                     )
                                 }
                                 iced_beacon::Span::View { .. } => text("View"),
