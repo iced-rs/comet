@@ -5,7 +5,7 @@ use crate::timeline::{self, Timeline};
 use crate::widget::card;
 
 use iced::widget::{center, column, container, rich_text, span};
-use iced::{Color, Element, Fill};
+use iced::{Color, Element, Fill, Fit};
 
 use std::collections::BTreeMap;
 
@@ -132,7 +132,7 @@ impl Custom {
                     )
                     .padding(10),
                 ))
-                .max_width(600),
+                .width(Fit.max(600.0)),
             )
             .into();
         }

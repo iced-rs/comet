@@ -30,19 +30,19 @@ iced_fontello = "0.15.0-dev"
 
 [patch.crates-io]
 iced.git = "https://github.com/iced-rs/iced.git"
-iced.rev = "e46f9c9e69a8d787823c4a64fdcc49c23f303065"
+iced.rev = "3451f0681e6585b13ed0a337736da51522274a69"
 
 iced_core.git = "https://github.com/iced-rs/iced.git"
-iced_core.rev = "e46f9c9e69a8d787823c4a64fdcc49c23f303065"
+iced_core.rev = "3451f0681e6585b13ed0a337736da51522274a69"
 
 iced_beacon.git = "https://github.com/iced-rs/iced.git"
-iced_beacon.rev = "e46f9c9e69a8d787823c4a64fdcc49c23f303065"
+iced_beacon.rev = "3451f0681e6585b13ed0a337736da51522274a69"
 
 iced_widget.git = "https://github.com/iced-rs/iced.git"
-iced_widget.rev = "e46f9c9e69a8d787823c4a64fdcc49c23f303065"
+iced_widget.rev = "3451f0681e6585b13ed0a337736da51522274a69"
 
 iced_palace.git = "https://github.com/hecrj/iced_palace.git"
-iced_palace.rev = "8001f0b8a61f5ee56e864f771cbecf7588ccb787"
+iced_palace.rev = "4ac99db507f6b084adb8a9aa515b44337087e6a8"
 
 iced_fontello.git = "https://github.com/hecrj/iced_fontello.git"
 iced_fontello.rev = "2e6d61ee5a869443a249e7ee46a460665ce4969d"

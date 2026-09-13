@@ -34,8 +34,8 @@ pub fn main() -> iced::Result {
         .title(Comet::title)
         .subscription(Comet::subscription)
         .theme(Comet::theme)
-        .font(icon::FONT)
-        .default_font(Font::MONOSPACE)
+        .fonts([icon::FONT])
+        .font(Font::MONOSPACE)
         .window(window::Settings {
             size: Size::new(800.0, 600.0),
             position: window::Position::SpecificWith(|window, monitor| {
